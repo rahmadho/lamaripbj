@@ -65,32 +65,9 @@ function providerUntuk(skema: Skema): StorageProvider {
   return p;
 }
 
-const ALLOWED_MIME = new Set([
-  "application/pdf",
-  "image/png",
-  "image/jpeg",
-  "image/webp",
-  "application/msword",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.ms-excel",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-]);
-
-export const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB
-
-export function isMimeAllowed(mime: string): boolean {
-  return ALLOWED_MIME.has(mime);
-}
-
-/** Validasi tipe & ukuran file. Melempar Error dengan pesan siap tampil. */
-export function validateFile(file: File): void {
-  if (!isMimeAllowed(file.type)) {
-    throw new Error(`Tipe file tidak diizinkan: ${file.type || "tidak dikenal"}`);
-  }
-  if (file.size > MAX_FILE_SIZE) {
-    throw new Error("Ukuran file melebihi 25 MB");
-  }
-}
+// Aturan validasi tinggal di modul terpisah agar aman diimpor komponen klien
+// (lihat ./aturan.ts); di-export ulang di sini untuk pemakai sisi server.
+export { MAX_FILE_SIZE, isMimeAllowed, validateFile } from "./aturan";
 
 /**
  * Simpan file dan kembalikan id `FileObj`.

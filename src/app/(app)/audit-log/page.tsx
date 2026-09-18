@@ -1,13 +1,12 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { getAuditLog, getDaftarAksiAudit } from "@/server/queries/laporan";
 import { AuditFilter } from "@/components/audit-filter";
+import { Pagination } from "@/components/pagination";
 import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -26,6 +25,7 @@ export default async function AuditLogPage({
     dari?: string;
     sampai?: string;
     page?: string;
+    perPage?: string;
   }>;
 }) {
   const session = await auth();
@@ -39,16 +39,11 @@ export default async function AuditLogPage({
       dari: sp.dari,
       sampai: sp.sampai,
       page: sp.page ? Number(sp.page) : 1,
+      perPage: sp.perPage ? Number(sp.perPage) : undefined,
     }),
     prisma.user.findMany({ select: { id: true, nama: true }, orderBy: { nama: "asc" } }),
     getDaftarAksiAudit(),
   ]);
-
-  const buildPageUrl = (page: number) => {
-    const next = new URLSearchParams(sp as Record<string, string>);
-    next.set("page", String(page));
-    return `/audit-log?${next.toString()}`;
-  };
 
   return (
     <div className="space-y-6">
@@ -99,24 +94,15 @@ export default async function AuditLogPage({
         </TableBody>
       </Table>
 
-      {data.totalPage > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground tabular-nums">
-            Halaman {data.page} dari {data.totalPage}
-          </span>
-          <div className="flex gap-2">
-            {data.page > 1 && (
-              <Button variant="outline" size="sm" render={<Link href={buildPageUrl(data.page - 1)} />}>
-                Sebelumnya
-              </Button>
-            )}
-            {data.page < data.totalPage && (
-              <Button variant="outline" size="sm" render={<Link href={buildPageUrl(data.page + 1)} />}>
-                Berikutnya
-              </Button>
-            )}
-          </div>
-        </div>
+      {data.total > 0 && (
+        <Pagination
+          halaman={data.page}
+          totalHalaman={data.totalPage}
+          total={data.total}
+          perHalaman={data.perPage}
+          label="entri"
+          paramPerHalaman="perPage"
+        />
       )}
     </div>
   );

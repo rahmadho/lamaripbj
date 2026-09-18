@@ -22,8 +22,10 @@ export async function getAuditLog(filter: {
   dari?: string;
   sampai?: string;
   page?: number;
+  perPage?: number;
 }) {
-  const perPage = 50;
+  const perPage =
+    filter.perPage && filter.perPage > 0 ? Math.min(filter.perPage, 200) : 50;
   const page = filter.page && filter.page > 0 ? filter.page : 1;
   const where = {
     AND: [
