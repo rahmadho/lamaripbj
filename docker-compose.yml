@@ -1,0 +1,71 @@
+# Aplikasi Arsip Kantor — orkestrasi Docker.
+#
+# Database (PostgreSQL) dan MinIO TIDAK dibuat di sini — keduanya sudah jalan
+# sebagai container lain:
+#   • PostgreSQL  → network `db-network`
+#   • MinIO       → network `app-network`
+# Compose ini hanya menjalankan aplikasi dan menggabungkannya ke kedua network.
+#
+# Wajib di .env:
+#   DATABASE_URL       = postgres://USER:PASS@NAMA_SERVICE_DB:5432/arsip
+#                        (host = nama container/service Postgres di db-network)
+#   AUTH_SECRET        = npx auth secret
+#   STORAGE_BACKEND    = local | minio
+#   MINIO_ENDPOINT     = nama container MinIO di app-network (bila pakai MinIO)
+#
+# Jalankan:
+#   docker compose up -d --build
+#
+# Resource limit tetap bisa diatur via APP_CPU_LIMIT / APP_MEM_LIMIT di .env.
+
+name: lamaripbj
+
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?wajib diisi di .env — host = nama service Postgres di db-network}
+      AUTH_SECRET: ${AUTH_SECRET:?wajib diisi di .env — generate dengan `npx auth secret`}
+      AUTH_TRUST_HOST: "true"
+      TZ: ${TZ:-Asia/Jakarta}
+      STORAGE_BACKEND: ${STORAGE_BACKEND:-local}
+      STORAGE_DIR: /data/storage
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-}
+      MINIO_PORT: ${MINIO_PORT:-9000}
+      MINIO_USE_SSL: ${MINIO_USE_SSL:-false}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-}
+      MINIO_BUCKET: ${MINIO_BUCKET:-arsip}
+      SIPEDAL_API_BASE: ${SIPEDAL_API_BASE:-https://sipedal.sumbarprov.go.id/api/v1/arsip/paket}
+      SIPEDAL_API_TIMEOUT: ${SIPEDAL_API_TIMEOUT:-8000}
+      DB_SEED: ${DB_SEED:-false}
+    volumes:
+      - storage:/data/storage
+    networks:
+      - db-network    # menuju PostgreSQL eksternal
+      - app-network   # menuju MinIO eksternal (dan trafik keluar)
+    deploy:
+      resources:
+        limits:
+          cpus: ${APP_CPU_LIMIT:-0.50}
+          memory: ${APP_MEM_LIMIT:-512M}
+        reservations:
+          cpus: ${APP_CPU_RESERVE:-0.25}
+          memory: ${APP_MEM_RESERVE:-256M}
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  db-network:
+    external: true    # sudah ada — dibuat oleh orkestrasi lain
+  app-network:
+    external: true    # sudah ada — dibuat oleh orkestrasi lain
+
+volumes:
+  storage:

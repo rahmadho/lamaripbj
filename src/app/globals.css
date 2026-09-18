@@ -1,26 +1,298 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:is(.dark *));
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-inter);
+  --font-heading: var(--font-jakarta);
+  --font-mono: var(--font-mono);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+
+  /* Token semantik lembaga (dari DESIGN.md) */
+  --color-surface-canvas: var(--surface-canvas);
+  --color-surface-subtle: var(--surface-subtle);
+  --color-border-subtle: var(--border-subtle);
+  --color-status-verified: var(--status-verified);
+  --color-status-pending: var(--status-pending);
+  --color-status-restricted: var(--status-restricted);
+  --color-status-info: var(--status-info);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+/* ── Institutional Bureau — tema terang ───────────────────────────── */
+:root {
+  --radius: 0.5rem;
+
+  /* Kanvas & permukaan */
+  --surface-canvas: oklch(0.983 0.003 264); /* #F8FAFC slate-50 */
+  --surface-subtle: oklch(0.968 0.006 264); /* #F1F5F9 */
+  --border-subtle: oklch(0.929 0.008 264); /* #E2E8F0 */
+
+  --background: oklch(0.983 0.003 264);
+  --foreground: oklch(0.233 0.038 258); /* #0F172A slate-900 */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.233 0.038 258);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.233 0.038 258);
+
+  /* Utama — royal blue */
+  --primary: oklch(0.488 0.216 264); /* #1E40AF */
+  --primary-foreground: oklch(1 0 0);
+  --primary-hover: oklch(0.577 0.216 262); /* #2563EB */
+
+  /* Sekunder — slate navy struktural */
+  --secondary: oklch(0.968 0.006 264);
+  --secondary-foreground: oklch(0.233 0.038 258);
+
+  --muted: oklch(0.968 0.006 264);
+  --muted-foreground: oklch(0.554 0.026 257); /* #64748B */
+
+  --accent: oklch(0.954 0.018 262);
+  --accent-foreground: oklch(0.488 0.216 264);
+
+  --destructive: oklch(0.569 0.222 15); /* #E11D48 */
+  --destructive-foreground: oklch(1 0 0);
+
+  --border: oklch(0.929 0.008 264);
+  --input: oklch(0.869 0.011 264); /* #CBD5E1 */
+  --ring: oklch(0.577 0.216 262);
+
+  /* Status fungsional */
+  --status-verified: oklch(0.596 0.126 162); /* #059669 */
+  --status-pending: oklch(0.666 0.152 66); /* #D97706 */
+  --status-restricted: oklch(0.569 0.222 15); /* #E11D48 */
+  --status-info: oklch(0.511 0.211 275); /* #4F46E5 */
+
+  --chart-1: oklch(0.488 0.216 264);
+  --chart-2: oklch(0.511 0.211 275);
+  --chart-3: oklch(0.596 0.126 162);
+  --chart-4: oklch(0.666 0.152 66);
+  --chart-5: oklch(0.554 0.026 257);
+
+  /* Rail navigasi — navy struktural, selalu gelap di tema terang */
+  --sidebar: oklch(0.233 0.038 258);
+  --sidebar-foreground: oklch(0.869 0.011 264);
+  --sidebar-primary: oklch(0.577 0.216 262);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.32 0.045 260);
+  --sidebar-accent-foreground: oklch(0.983 0.003 264);
+  --sidebar-border: oklch(0.32 0.045 260);
+  --sidebar-ring: oklch(0.577 0.216 262);
+}
+
+/* ── Institutional Bureau — tema gelap ────────────────────────────── */
+.dark {
+  --surface-canvas: oklch(0.204 0.028 258); /* slate-950-ish */
+  --surface-subtle: oklch(0.246 0.03 258);
+  --border-subtle: oklch(0.32 0.03 260);
+
+  --background: oklch(0.204 0.028 258);
+  --foreground: oklch(0.929 0.011 264); /* tidak pure putih */
+  --card: oklch(0.246 0.03 258);
+  --card-foreground: oklch(0.929 0.011 264);
+  --popover: oklch(0.262 0.032 258);
+  --popover-foreground: oklch(0.929 0.011 264);
+
+  --primary: oklch(0.62 0.19 262); /* biru lebih terang agar kontras */
+  --primary-foreground: oklch(0.99 0.005 260);
+  --primary-hover: oklch(0.68 0.17 262);
+
+  --secondary: oklch(0.29 0.032 258);
+  --secondary-foreground: oklch(0.929 0.011 264);
+
+  --muted: oklch(0.29 0.032 258);
+  --muted-foreground: oklch(0.706 0.02 257);
+
+  --accent: oklch(0.32 0.045 260);
+  --accent-foreground: oklch(0.85 0.08 262);
+
+  --destructive: oklch(0.63 0.2 15);
+  --destructive-foreground: oklch(0.99 0.005 260);
+
+  --border: oklch(0.32 0.03 260);
+  --input: oklch(0.35 0.032 260);
+  --ring: oklch(0.62 0.19 262);
+
+  --status-verified: oklch(0.72 0.14 162);
+  --status-pending: oklch(0.78 0.14 70);
+  --status-restricted: oklch(0.7 0.18 15);
+  --status-info: oklch(0.68 0.16 275);
+
+  --chart-1: oklch(0.62 0.19 262);
+  --chart-2: oklch(0.68 0.16 275);
+  --chart-3: oklch(0.72 0.14 162);
+  --chart-4: oklch(0.78 0.14 70);
+  --chart-5: oklch(0.706 0.02 257);
+
+  --sidebar: oklch(0.176 0.026 258);
+  --sidebar-foreground: oklch(0.869 0.011 264);
+  --sidebar-primary: oklch(0.62 0.19 262);
+  --sidebar-primary-foreground: oklch(0.99 0.005 260);
+  --sidebar-accent: oklch(0.28 0.04 260);
+  --sidebar-accent-foreground: oklch(0.983 0.003 264);
+  --sidebar-border: oklch(0.3 0.03 260);
+  --sidebar-ring: oklch(0.62 0.19 262);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv05" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-heading;
+  }
+  /* Angka tabular untuk tabel, nomor arsip, kode paket, log audit */
+  table,
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "cv05" 1, "zero" 1;
+  }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 22%, transparent);
+  }
+
+  /* Scrollbar tipis & rapi — mengikuti token tema (terang/gelap otomatis) */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--foreground) 18%, transparent) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track,
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    /* Border transparan + background-clip => thumb tampak ramping & mengambang */
+    border: 3px solid transparent;
+    background-clip: padding-box;
+    background-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklch, var(--foreground) 30%, transparent);
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    background-color: color-mix(in oklch, var(--foreground) 42%, transparent);
+  }
+
+  /* Scrollbar pada rail navigasi gelap: gunakan token sidebar agar kontras pas */
+  .bg-sidebar *,
+  [data-scrollbar="rail"] {
+    scrollbar-color: color-mix(in oklch, var(--sidebar-foreground) 22%, transparent) transparent;
+  }
+  .bg-sidebar ::-webkit-scrollbar-thumb {
+    background-color: color-mix(in oklch, var(--sidebar-foreground) 22%, transparent);
+  }
+  .bg-sidebar ::-webkit-scrollbar-thumb:hover {
+    background-color: color-mix(in oklch, var(--sidebar-foreground) 36%, transparent);
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer utilities {
+  /* Label kecil all-caps untuk stamp arsip, chip status, tag taksonomi */
+  .label-caps {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 14px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  /* Bayangan berjenjang sesuai DESIGN.md (level 1–4) */
+  .elev-1 {
+    box-shadow: 0 1px 2px 0 rgba(15, 23, 42, 0.04);
+  }
+  .elev-2 {
+    box-shadow:
+      0 4px 6px -1px rgba(15, 23, 42, 0.07),
+      0 2px 4px -2px rgba(15, 23, 42, 0.04);
+  }
+  .elev-3 {
+    box-shadow:
+      0 10px 15px -3px rgba(15, 23, 42, 0.08),
+      0 4px 6px -4px rgba(15, 23, 42, 0.03);
+  }
+  .elev-4 {
+    box-shadow:
+      0 20px 25px -5px rgba(15, 23, 42, 0.12),
+      0 8px 10px -6px rgba(15, 23, 42, 0.04);
+  }
+
+  /* Akses masuk berurutan halus untuk daftar/panel */
+  @keyframes rise-in {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  .animate-rise {
+    animation: rise-in 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .animate-rise {
+      animation: none;
+    }
+  }
 }

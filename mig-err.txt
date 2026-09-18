@@ -1,0 +1,1 @@
+[2mEnvironment variables loaded from .env[22m

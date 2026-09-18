@@ -1,0 +1,236 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String         @id @default(cuid())
+  nama         String
+  email        String         @unique
+  passwordHash String
+  role         Role           @default(STAFF)
+  aktif        Boolean        @default(true)
+  createdAt    DateTime       @default(now())
+  arsipPbj     ArsipPbj[]
+  arsipPegawai ArsipPegawai[]
+  auditLogs    AuditLog[]
+  direktori    Direktori[]
+  grupAnggota  GrupAnggota[]
+  shares       ShareEntry[]
+  paketPbj     PaketPbj[]     @relation("paketPbj")
+}
+
+model Direktori {
+  id          String         @id @default(cuid())
+  nama        String
+  deskripsi   String?
+  parentId    String?
+  bolehUpload Boolean        @default(true)
+  uploadRoles Role[]
+  ownerId     String
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  metadata    Json?
+  arsip       ArsipPegawai[]
+  owner       User           @relation(fields: [ownerId], references: [id])
+  parent      Direktori?     @relation("tree", fields: [parentId], references: [id])
+  children    Direktori[]    @relation("tree")
+  shares      ShareEntry[]
+
+  @@index([parentId])
+}
+
+model ArsipPegawai {
+  id           String       @id @default(cuid())
+  direktoriId  String
+  nomorDokumen String
+  namaDokumen  String
+  tanggal      DateTime
+  metadata     Json?
+  fileId       String       @unique
+  createdById  String
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  createdBy    User         @relation(fields: [createdById], references: [id])
+  direktori    Direktori    @relation(fields: [direktoriId], references: [id])
+  file         FileObj      @relation(fields: [fileId], references: [id])
+  shares       ShareEntry[]
+
+  @@index([direktoriId])
+  @@index([nomorDokumen])
+}
+
+model TaksonomiJenisDoc {
+  id        String          @id @default(cuid())
+  nama      String          @unique
+  namaSingkat String
+  keterangan String?
+  arsip ArsipPbj[]
+  peta TaksonomiPeta[]
+}
+
+model TaksonomiPeta {
+  id                  String            @id @default(cuid())
+  jenisPengadaan      JenisPengadaan?
+  metodePengadaan     String?
+  taksonomiJenisDocId String
+  taksonomiJenisDoc   TaksonomiJenisDoc @relation(fields: [taksonomiJenisDocId], references: [id], onDelete: Cascade)
+
+  @@unique([jenisPengadaan, metodePengadaan, taksonomiJenisDocId])
+}
+
+model PaketPbj {
+  id              String          @id @default(cuid())
+  paketKode       String
+  paketNama       String
+  jenisPengadaan  JenisPengadaan
+  metodePengadaan String
+  tahun           Int
+  keterangan      String?
+  grupId          String?
+  createdById     String
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  createdBy       User            @relation("paketPbj", fields: [createdById], references: [id])
+  grup            Grup?           @relation(fields: [grupId], references: [id])
+  dokumen         ArsipPbj[]
+
+  @@unique([paketKode, tahun])
+  @@index([grupId])
+}
+
+model ArsipPbj {
+  id                  String            @id @default(cuid())
+  paketId             String?
+  paketKode           String
+  paketNama           String
+  jenisPengadaan      JenisPengadaan
+  metodePengadaan     String
+  tahun               Int
+  keterangan          String?
+  taksonomiJenisDocId String
+  fileId              String            @unique
+  createdById         String
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  createdBy           User              @relation(fields: [createdById], references: [id])
+  file                FileObj           @relation(fields: [fileId], references: [id])
+  taksonomiJenisDoc   TaksonomiJenisDoc @relation(fields: [taksonomiJenisDocId], references: [id])
+  paket               PaketPbj?         @relation(fields: [paketId], references: [id])
+  shares              ShareEntry[]
+
+  @@unique([paketKode, taksonomiJenisDocId])
+  @@index([jenisPengadaan, metodePengadaan, tahun])
+  @@index([paketId])
+}
+
+model Grup {
+  id      String        @id @default(cuid())
+  nama    String        @unique
+  anggota GrupAnggota[]
+  shares  ShareEntry[]
+  paket   PaketPbj[]
+}
+
+model GrupAnggota {
+  grupId String
+  userId String
+  grup   Grup   @relation(fields: [grupId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([grupId, userId])
+}
+
+model ShareEntry {
+  id             String          @id @default(cuid())
+  // izin multi-pilih untuk arsip pegawai/direktori: VIEW, UPLOAD, CREATE_SUBDIR, DOWNLOAD, DELETE
+  // arsip PBJ tetap VIEW/DOWNLOAD (di-share ke grup)
+  level          PermissionLevel
+  izin           String[]        @default([])
+  userId         String?
+  grupId         String?
+  role           Role?
+  semuaUser      Boolean         @default(false)
+  direktoriId    String?
+  arsipPegawaiId String?
+  arsipPbjId     String?
+  createdBy      String
+  createdAt      DateTime        @default(now())
+  arsipPbj       ArsipPbj?       @relation(fields: [arsipPbjId], references: [id], onDelete: Cascade)
+  arsipPegawai   ArsipPegawai?   @relation(fields: [arsipPegawaiId], references: [id], onDelete: Cascade)
+  direktori      Direktori?      @relation(fields: [direktoriId], references: [id], onDelete: Cascade)
+  grup           Grup?           @relation(fields: [grupId], references: [id])
+  user           User?           @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([grupId])
+  @@index([role])
+  @@index([semuaUser])
+}
+
+model FileObj {
+  id           String        @id @default(cuid())
+  fileName     String
+  storedName   String        @unique
+  mimeType     String
+  size         Int
+  createdAt    DateTime      @default(now())
+  arsipPbj     ArsipPbj?
+  arsipPegawai ArsipPegawai?
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  aksi      String
+  entitas   String
+  entitasId String?
+  detail    Json?
+  ip        String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([createdAt])
+}
+
+model MenuItem {
+  id       String     @id @default(cuid())
+  key      String     @unique
+  label    String
+  path     String
+  icon     String?
+  grup     String?
+  parentId String?
+  urutan   Int        @default(0)
+  aktif    Boolean    @default(true)
+  roles    Role[]
+  parent   MenuItem?  @relation("menu", fields: [parentId], references: [id])
+  children MenuItem[] @relation("menu")
+
+  @@index([parentId])
+  @@index([grup])
+}
+
+enum Role {
+  ADMIN
+  PIMPINAN
+  PEJABAT_FUNGSIONAL
+  STAFF
+  UPLOADER
+}
+
+enum JenisPengadaan {
+  BARANG
+  KONSTRUKSI
+  JASA_KONSULTANSI
+  JASA_LAINNYA
+}
+
+enum PermissionLevel {
+  VIEW
+  DOWNLOAD
+}
