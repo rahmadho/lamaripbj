@@ -4,7 +4,7 @@
 // sinyal Docker (SIGTERM) dengan benar.
 import net from "node:net";
 import { spawnSync } from "node:child_process";
-import { mkdirSync, accessSync, constants } from "node:fs";
+import { mkdirSync, accessSync, chmodSync, readdirSync, statSync, constants } from "node:fs";
 import process from "node:process";
 
 const NODE = "/nodejs/bin/node";
@@ -63,10 +63,76 @@ if (!siap) process.exit(1);
   }
 }
 
+// Prisma CLI menulis/mengganti binary di node_modules/@prisma/engines dan
+// membaca client di node_modules/.prisma. Pastikan keduanya ada & writable
+// oleh uid nonroot (65532) agar `migrate deploy` tidak gagal permission.
+function pastikanWritable(p, label) {
+  try {
+    accessSync(p, constants.R_OK);
+  } catch {
+    console.error(
+      `[entrypoint] GAGAL: ${p} tidak dapat diakses.\n` +
+        `  Pastikan image dibangun ulang tanpa cache: docker compose build --no-cache app`
+    );
+    process.exit(1);
+  }
+  try {
+    accessSync(p, constants.W_OK);
+    console.log(`[entrypoint] ${label} OK (readable+writable): ${p}`);
+    return;
+  } catch {
+    // Owner sudah 65532 lewat `COPY --chown`, jadi chmod best-effort seharusnya
+    // berhasil. Tambahkan bit tulis untuk owner agar Prisma bisa ganti engine.
+    try {
+      chmodSync(p, 0o755);
+      for (const f of readdirSync(p)) {
+        const fp = `${p}/${f}`;
+        try {
+          if (statSync(fp).isFile()) chmodSync(fp, 0o755);
+        } catch {
+          /* abaikan file individual */
+        }
+      }
+      accessSync(p, constants.W_OK);
+      console.log(`[entrypoint] ${label} writable setelah chmod: ${p}`);
+    } catch (e) {
+      console.error(
+        `[entrypoint] GAGAL: ${label} tidak writable: ${p}\n` +
+          `  ${e instanceof Error ? e.message : String(e)}\n` +
+          `  Rebuild image: docker compose build --no-cache app`
+      );
+      process.exit(1);
+    }
+  }
+}
+
+pastikanWritable("/app/node_modules/@prisma/engines", "prisma engines");
+pastikanWritable("/app/node_modules/.prisma", "prisma client");
+
 console.log("[entrypoint] menerapkan migrasi prisma...");
 {
-  const r = spawnSync(NODE, [PRISMA, "migrate", "deploy"], { stdio: "inherit", shell: false });
-  if (r.status !== 0) process.exit(r.status ?? 1);
+  // DB eksternal bisa lambat/berfluktuasi: coba beberapa kali sebelum menyerah
+  // agar container tidak langsung restart-loop hanya karena timeout sesaat.
+  const maksCoba = Number(process.env.MIGRATE_RETRY ?? 5);
+  let sukses = false;
+  for (let i = 1; i <= maksCoba; i++) {
+    const r = spawnSync(NODE, [PRISMA, "migrate", "deploy"], { stdio: "inherit", shell: false });
+    if (r.status === 0) {
+      sukses = true;
+      break;
+    }
+    console.error(`[entrypoint] migrasi gagal (percobaan ${i}/${maksCoba}).`);
+    if (i < maksCoba) {
+      // hindari "bentrok" lock migrasi saat percobaan berikutnya
+      const jeda = 5_000;
+      console.error(`[entrypoint] coba lagi dalam ${jeda / 1000} detik...`);
+      await new Promise((res) => setTimeout(res, jeda));
+    }
+  }
+  if (!sukses) {
+    console.error(`[entrypoint] GAGAL: migrasi prisma tidak berhasil setelah ${maksCoba}x coba.`);
+    process.exit(1);
+  }
 }
 
 if ((process.env.DB_SEED ?? "false") === "true") {

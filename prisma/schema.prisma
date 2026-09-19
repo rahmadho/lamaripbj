@@ -1,5 +1,9 @@
 generator client {
   provider = "prisma-client-js"
+  // Target eksplisit: image build (node:24-bookworm-slim) & runtime
+  // (distroless nodejs24-debian12) sama-sama Debian 12 / OpenSSL 3.
+  // Tanpa ini, Prisma menebak target dari host build dan bisa salah.
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {

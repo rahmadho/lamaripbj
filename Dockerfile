@@ -55,7 +55,8 @@ ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1 \
     PORT=3000 \
     HOSTNAME="0.0.0.0" \
-    STORAGE_DIR=/data/storage
+    STORAGE_DIR=/data/storage \
+    HOME=/tmp
 
 # OpenSSL & CA certificates untuk Prisma engine + fetch HTTPS (API Sipedal).
 # Symlink di /etc/ssl/certs menunjuk ke /usr/share/ca-certificates → ikut disalin.
@@ -65,19 +66,22 @@ COPY --from=builder /usr/share/ca-certificates /usr/share/ca-certificates
 COPY --from=builder /lib/x86_64-linux-gnu/libssl.so* /lib/x86_64-linux-gnu/
 COPY --from=builder /lib/x86_64-linux-gnu/libcrypto.so* /lib/x86_64-linux-gnu/
 
-COPY --from=builder /app/public ./public
-COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/scripts ./scripts
+# Semua penyalinan ke runner pakai --chown=65532:65532 agar proses nonroot
+# (uid 65532) bisa membaca & MENULIS — Prisma CLI perlu menulis/mengganti
+# binary di node_modules/@prisma/engines saat `migrate deploy`.
+COPY --from=builder --chown=65532:65532 /app/public ./public
+COPY --from=builder --chown=65532:65532 /app/.next/standalone ./
+COPY --from=builder --chown=65532:65532 /app/.next/static ./.next/static
+COPY --from=builder --chown=65532:65532 /app/prisma ./prisma
+COPY --from=builder --chown=65532:65532 /app/scripts ./scripts
 # node_modules production lengkap (termasuk Prisma CLI + dependency transitif).
-COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=prod-deps --chown=65532:65532 /app/node_modules ./node_modules
 # Client Prisma yang sudah di-generate menimpa placeholder di atas.
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=65532:65532 /app/node_modules/.prisma ./node_modules/.prisma
 
 # Distroless: non-root (uid 65532), tanpa shell → entrypoint via node langsung.
 # Migrasi/seed dijalankan dari entrypoint JS (lihat docker/entrypoint.mjs).
-COPY docker/entrypoint.mjs ./docker/entrypoint.mjs
+COPY --chown=65532:65532 docker/entrypoint.mjs ./docker/entrypoint.mjs
 # Distroless tidak punya shell, jadi `RUN mkdir` akan gagal. Buat direktori
 # storage di builder lalu salin dengan ownership uid/gid nonroot (65532).
 COPY --from=builder --chown=65532:65532 /app/storage-seed/ /data/storage/

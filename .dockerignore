@@ -1,23 +1,33 @@
+# Artefak build & dependensi (di-install ulang di dalam image)
 .next
 node_modules
+
+# VCS & meta
 .git
 .gitignore
-.env
-.env*.local
-*.log
-coverage
-.next
-backups
-storage
-pgdata
 .dockerignore
 Dockerfile*
 docker-compose*.yml
+
+# Rahasia / env — jangan pernah masuk image
+.env
+.env*.local
+
+# Data lokal & volume (jangan dibundel ke image)
+storage
+pgdata
+backups
+
+# Sampah & laporan lokal
+*.log
+coverage
+
+# Editor/IDE
+.vscode
+.idea
+
+# Dokumen & test (tidak dipakai saat build)
 README.md
 docs
 tests
-.vscode
-.idea
 *.md
-!docs/STORAGE.md
-!docs/BACKUP.md
