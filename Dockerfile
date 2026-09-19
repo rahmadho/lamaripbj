@@ -91,4 +91,6 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
   CMD ["/nodejs/bin/node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
 
 ENTRYPOINT ["/nodejs/bin/node", "docker/entrypoint.mjs"]
-CMD ["node", "server.js"]
+# CMD = argumen Node untuk menjalankan server, BUKAN perintah `node` itu sendiri.
+# Entrypoint sudah memakai NODE (/nodejs/bin/node) di depannya, jadi cukup nama file.
+CMD ["server.js"]

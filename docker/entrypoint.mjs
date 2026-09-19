@@ -144,5 +144,12 @@ if ((process.env.DB_SEED ?? "false") === "true") {
 }
 
 console.log("[entrypoint] start aplikasi.");
-const child = spawnSync(NODE, process.argv.slice(2), { stdio: "inherit", shell: false });
+// Argumen Node = CMD dari Dockerfile. Tangani bila CMD masih menuliskan
+// `node` eksplisit (mis. ["node","server.js"]) agar tidak mencoba membuka
+// file bernama `node` — normalisasi ke argumen Node murni.
+let args = process.argv.slice(2);
+if (args[0] === "node" || args[0] === "/nodejs/bin/node") args = args.slice(1);
+if (args.length === 0) args = ["server.js"];
+console.log(`[entrypoint] menjalankan: ${NODE} ${args.join(" ")}`);
+const child = spawnSync(NODE, args, { stdio: "inherit", shell: false });
 process.exit(child.status ?? 0);
