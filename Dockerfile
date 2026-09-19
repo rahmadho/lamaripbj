@@ -1,19 +1,37 @@
+# syntax=docker/dockerfile:1.7
 # ── Build dependencies ──────────────────────────────────────────────
+# BuildKit syntax: cache mount untuk npm agar tidak unduh ulang tiap build.
 FROM node:24-bookworm-slim AS deps
 WORKDIR /app
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+  npm ci
 
 # ── Build aplikasi ────────────────────────────────────────────────────
 FROM node:24-bookworm-slim AS builder
 WORKDIR /app
+# Slim image tidak punya openssl & CA certificates. Install di sini agar file
+# /usr/lib/ssl, /etc/ssl/certs, libssl.so, libcrypto.so tersedia untuk di-COPY
+# ke stage runner (distroless tidak punya apt).
+# Cache mount apt: paket .deb & index tersimpan antar build.
+RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
+    --mount=type=cache,target=/var/lib/apt,sharing=locked \
+    apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates openssl \
+ && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # Telemetri Next.js dimatikan agar build tidak mengirim data keluar.
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN npx prisma generate \
+# Cache: prisma engine (~/.cache/prisma), Next/turbopack build cache (.next/cache),
+# dan cache tsc (node_modules/.cache). Ketiganya mempercepat incremental re-build.
+RUN --mount=type=cache,target=/root/.cache/prisma,sharing=locked \
+    --mount=type=cache,target=/app/.next/cache,sharing=locked \
+    --mount=type=cache,target=/app/node_modules/.cache,sharing=locked \
+    npx prisma generate \
  && npm run build \
- && npx tsc prisma/seed.ts --outDir prisma --module commonjs --target es2022 --esModuleInterop --skipLibCheck --resolveJsonModule
+ && npx tsc prisma/seed.ts --outDir prisma --module commonjs --target es2022 --esModuleInterop --skipLibCheck --resolveJsonModule \
+ && mkdir -p /app/storage-seed
 
 # ── Runtime: Distroless hardened ─────────────────────────────────────
 # gcr.io/distroless/nodejs24-debian12: non-root, tanpa shell/package manager,
@@ -29,8 +47,10 @@ ENV NODE_ENV=production \
     STORAGE_DIR=/data/storage
 
 # OpenSSL & CA certificates untuk Prisma engine + fetch HTTPS (API Sipedal).
+# Symlink di /etc/ssl/certs menunjuk ke /usr/share/ca-certificates → ikut disalin.
 COPY --from=builder /usr/lib/ssl /usr/lib/ssl
 COPY --from=builder /etc/ssl/certs /etc/ssl/certs
+COPY --from=builder /usr/share/ca-certificates /usr/share/ca-certificates
 COPY --from=builder /lib/x86_64-linux-gnu/libssl.so* /lib/x86_64-linux-gnu/
 COPY --from=builder /lib/x86_64-linux-gnu/libcrypto.so* /lib/x86_64-linux-gnu/
 
@@ -48,7 +68,9 @@ COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 # Distroless: non-root (uid 65532), tanpa shell → entrypoint via node langsung.
 # Migrasi/seed dijalankan dari entrypoint JS (lihat docker/entrypoint.mjs).
 COPY docker/entrypoint.mjs ./docker/entrypoint.mjs
-RUN mkdir -p /data/storage
+# Distroless tidak punya shell, jadi `RUN mkdir` akan gagal. Buat direktori
+# storage di builder lalu salin dengan ownership uid/gid nonroot (65532).
+COPY --from=builder --chown=65532:65532 /app/storage-seed/ /data/storage/
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \

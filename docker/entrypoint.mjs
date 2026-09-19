@@ -4,6 +4,7 @@
 // sinyal Docker (SIGTERM) dengan benar.
 import net from "node:net";
 import { spawnSync } from "node:child_process";
+import { mkdirSync, accessSync, constants } from "node:fs";
 import process from "node:process";
 
 const NODE = "/nodejs/bin/node";
@@ -41,6 +42,26 @@ function tungguDb(url, coba = 30, jedaMs = 2000) {
 
 const siap = await tungguDb(process.env.DATABASE_URL ?? "");
 if (!siap) process.exit(1);
+
+// Pastikan direktori storage ada & bisa ditulis. Named volume Docker bisa
+// ter-mount dengan ownership root meski ada --chown di image, jadi kita cek
+// di sini (running sebagai uid nonroot 65532).
+{
+  const dir = process.env.STORAGE_DIR ?? "/data/storage";
+  try {
+    mkdirSync(dir, { recursive: true });
+    accessSync(dir, constants.W_OK);
+    console.log(`[entrypoint] storage siap & writable: ${dir}`);
+  } catch (e) {
+    console.error(
+      `[entrypoint] GAGAL: direktori storage tidak writable: ${dir}\n` +
+        `  ${e instanceof Error ? e.message : String(e)}\n` +
+        `  Perbaiki di host: pastikan volume dimiliki uid 65532 ` +
+        `(mis. \`docker volume rm <nama>\` agar dibuat ulang dari image).`
+    );
+    process.exit(1);
+  }
+}
 
 console.log("[entrypoint] menerapkan migrasi prisma...");
 {
