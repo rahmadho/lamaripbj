@@ -10,6 +10,9 @@
 #   DATABASE_URL       = postgres://USER:PASS@NAMA_SERVICE_DB:5432/arsip
 #                        (host = nama container/service Postgres di db-network)
 #   AUTH_SECRET        = npx auth secret
+#   AUTH_URL           = URL PUBLIK aplikasi, mis. https://arsip.example.go.id
+#                        (WAJIB — tanpa ini redirect logout/login salah host,
+#                         mis. ke http://0.0.0.0:3000 di balik reverse proxy)
 #   STORAGE_BACKEND    = local | minio
 #   MINIO_ENDPOINT     = nama container MinIO di app-network (bila pakai MinIO)
 #
@@ -30,6 +33,7 @@ services:
     environment:
       DATABASE_URL: ${DATABASE_URL:?wajib diisi di .env — host = nama service Postgres di db-network}
       AUTH_SECRET: ${AUTH_SECRET:?wajib diisi di .env — generate dengan `npx auth secret`}
+      AUTH_URL: ${AUTH_URL:?wajib diisi di .env — URL publik aplikasi, mis. https://arsip.example.go.id}
       AUTH_TRUST_HOST: "true"
       TZ: ${TZ:-Asia/Jakarta}
       STORAGE_BACKEND: ${STORAGE_BACKEND:-local}

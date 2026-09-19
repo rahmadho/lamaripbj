@@ -23,8 +23,9 @@ Wajib diisi sebelum `up`:
 
 | Variabel | Cara isi |
 |---|---|
-| `DATABASE_URL` | host = **nama container/service Postgres** di db-network (bukan `localhost`), mis. `postgres://arsip:PASS@nama-service-postgres:5432/arsip` |
+| `DATABASE_URL` | host = **nama container/service Postgres** di db-network (bukan `localhost`), mis. `postgres://arsip:PASS@nama-service-postgres:5432/arsip`. Tambahkan `connect_timeout=30&pool_timeout=30` bila DB lambat/lintas jaringan. Jangan tulis `sslcert=` kosong. |
 | `AUTH_SECRET` | hasil `npx auth secret` (acak, min. 32 karakter) |
+| `AUTH_URL` | **URL publik** aplikasi yang diakses browser, mis. `https://arsip.example.go.id`. **WAJIB** — tanpa ini redirect login/logout bisa salah host (mis. `http://0.0.0.0:3000`) di balik reverse proxy |
 | `MINIO_ENDPOINT` (bila MinIO) | nama container MinIO di app-network |
 
 > `.env` sudah masuk `.dockerignore` — tidak ikut ke dalam image.
@@ -135,6 +136,7 @@ docker run --rm -v lamaripbj_storage:/src -v $(pwd)/backups:/dst \
 | `GAGAL: database tidak terjangkau` | nama host di `DATABASE_URL` salah / network salah join | cek `docker network inspect db-network`, samakan nama service |
 | `P1001: Can't reach database` | `DATABASE_URL` memakai `localhost` | host harus nama container Postgres di db-network |
 | Login gagal setelah deploy | `AUTH_SECRET` kosong/berubah | isi dengan `npx auth secret`, jangan ganti tiap deploy |
+| Setelah logout/login pergi ke `http://0.0.0.0:3000/...` | `AUTH_URL` tidak diisi (Auth.js menebak host internal container) | isi `AUTH_URL` = URL publik (mis. `https://arsip.example.go.id`), lalu `docker compose up -d`. Pastikan juga nginx meneruskan `Host`/`X-Forwarded-*` |
 | File upload hilang setelah recreate | volume `storage` tidak terpasang | pastikan `volumes: - storage:/data/storage`; jangan hapus volume |
 | MinIO `AccessDenied` | kredensial salah / bucket belum dibuat | cek `MINIO_ACCESS_KEY/SECRET` sama dengan container MinIO eksternal |
 | Tidak bisa `docker exec sh` | memang demikian — distroless tanpa shell | gunakan `docker compose logs`, atau jalankan container debug terpisah |
