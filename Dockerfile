@@ -7,6 +7,17 @@ COPY package.json package-lock.json ./
 RUN --mount=type=cache,target=/root/.npm,sharing=locked \
   npm ci
 
+# ── Dependensi runtime saja (production) ────────────────────────────────
+# Prisma CLI dipakai saat runtime (`prisma migrate deploy` di entrypoint),
+# dan CLI-nya butuh dependency transitif lengkap (effect, c12, dll.). Karena
+# itu kita install production deps UTUH di sini lalu salin seluruhnya ke
+# runner — jauh lebih tahan-maintenance daripada menyalin paket satu-satu.
+FROM node:24-bookworm-slim AS prod-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm,sharing=locked \
+  npm ci --omit=dev
+
 # ── Build aplikasi ────────────────────────────────────────────────────
 FROM node:24-bookworm-slim AS builder
 WORKDIR /app
@@ -59,11 +70,10 @@ COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/scripts ./scripts
+# node_modules production lengkap (termasuk Prisma CLI + dependency transitif).
+COPY --from=prod-deps /app/node_modules ./node_modules
+# Client Prisma yang sudah di-generate menimpa placeholder di atas.
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
-COPY --from=builder /app/node_modules/prisma ./node_modules/prisma
-COPY --from=builder /app/node_modules/bcryptjs ./node_modules/bcryptjs
-COPY --from=builder /app/node_modules/.bin ./node_modules/.bin
 
 # Distroless: non-root (uid 65532), tanpa shell → entrypoint via node langsung.
 # Migrasi/seed dijalankan dari entrypoint JS (lihat docker/entrypoint.mjs).

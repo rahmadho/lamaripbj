@@ -24,6 +24,7 @@ services:
   app:
     build: .
     restart: unless-stopped
+    container_name: lamaripbj-app
     # ports:
     #   - "${APP_PORT:-3000}:3000"
     environment:
@@ -69,3 +70,4 @@ networks:
 
 volumes:
   storage:
+    name: lamaripbj-storage
