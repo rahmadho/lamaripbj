@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 const STORAGE_DIR = process.env.STORAGE_DIR ?? path.join(process.cwd(), "storage");
 
 async function main() {
-  const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@kantor.go.id" } });
+  const admin = await prisma.user.findUniqueOrThrow({ where: { username: "admin" } });
   await mkdir(STORAGE_DIR, { recursive: true });
 
   const storedName = "uji-unduh.txt";

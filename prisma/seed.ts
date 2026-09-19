@@ -30,18 +30,18 @@ async function main() {
   const pass = await bcrypt.hash("password123", 10);
 
   const users = [
-    { nama: "Admin", email: "admin@kantor.go.id", role: "ADMIN" as const },
-    { nama: "Pimpinan", email: "pimpinan@kantor.go.id", role: "PIMPINAN" as const },
-    { nama: "Pejabat Fungsional", email: "fungsional@kantor.go.id", role: "PEJABAT_FUNGSIONAL" as const },
-    { nama: "Pejabat Fungsional 2", email: "fungsional2@kantor.go.id", role: "PEJABAT_FUNGSIONAL" as const },
-    { nama: "Pejabat Fungsional 3", email: "fungsional3@kantor.go.id", role: "PEJABAT_FUNGSIONAL" as const },
-    { nama: "Staff", email: "staff@kantor.go.id", role: "STAFF" as const },
-    { nama: "Uploader", email: "uploader@kantor.go.id", role: "UPLOADER" as const },
+    { nama: "Admin", username: "admin", email: "admin@kantor.go.id", role: "ADMIN" as const },
+    { nama: "Pimpinan", username: "pimpinan", email: "pimpinan@kantor.go.id", role: "PIMPINAN" as const },
+    { nama: "Pejabat Fungsional", username: "fungsional", email: "fungsional@kantor.go.id", role: "PEJABAT_FUNGSIONAL" as const },
+    { nama: "Pejabat Fungsional 2", username: "fungsional2", email: "fungsional2@kantor.go.id", role: "PEJABAT_FUNGSIONAL" as const },
+    { nama: "Pejabat Fungsional 3", username: "fungsional3", email: "fungsional3@kantor.go.id", role: "PEJABAT_FUNGSIONAL" as const },
+    { nama: "Staff", username: "staff", email: "staff@kantor.go.id", role: "STAFF" as const },
+    { nama: "Uploader", username: "uploader", email: "uploader@kantor.go.id", role: "UPLOADER" as const },
   ];
 
   for (const u of users) {
     await prisma.user.upsert({
-      where: { email: u.email },
+      where: { username: u.username },
       update: { passwordHash: pass },
       create: { ...u, passwordHash: pass },
     });
@@ -83,7 +83,7 @@ async function main() {
 
   // ponytail: paket dummy di-level provider (src/lib/paket.ts) — seed DB tidak perlu
   console.log("Seed selesai.");
-  console.log("Login: admin@kantor.go.id / password123 (role lain sama pattern)");
+  console.log("Login: admin / password123 (role lain sama pattern)");
   console.log("Metode pengadaan tersedia:", metodeList.join(", "));
 }
 

@@ -52,7 +52,7 @@ export default async function FolderPage({
       canAccessDirektori(session, folderId, "DOWNLOAD"),
       prisma.user.findMany({
         where: { aktif: true },
-        select: { id: true, nama: true, email: true },
+        select: { id: true, nama: true, username: true, email: true },
         orderBy: { nama: "asc" },
       }),
       prisma.grup.findMany({ select: { id: true, nama: true }, orderBy: { nama: "asc" } }),

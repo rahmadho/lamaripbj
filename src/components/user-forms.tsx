@@ -35,7 +35,8 @@ const ROLES = [
 type UserItem = {
   id: string;
   nama: string;
-  email: string;
+  username: string;
+  email: string | null;
   role: string;
   aktif: boolean;
 };
@@ -47,6 +48,7 @@ export function UserForm({ mode = "create", initial }: { mode?: "create" | "edit
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState({
     nama: initial?.nama ?? "",
+    username: initial?.username ?? "",
     email: initial?.email ?? "",
     role: initial?.role ?? "STAFF",
     aktif: initial?.aktif ?? true,
@@ -61,6 +63,7 @@ export function UserForm({ mode = "create", initial }: { mode?: "create" | "edit
         mode === "edit" && initial
           ? await updateUser(initial.id, {
               nama: form.nama,
+              username: form.username,
               email: form.email,
               role: form.role,
               aktif: form.aktif,
@@ -68,13 +71,15 @@ export function UserForm({ mode = "create", initial }: { mode?: "create" | "edit
             })
           : await createUser({
               nama: form.nama,
+              username: form.username,
               email: form.email,
               role: form.role,
               password: form.password,
             });
       if (!res.ok) return setError(res.error);
       setOpen(false);
-      if (mode === "create") setForm({ ...form, nama: "", email: "", password: "" });
+      if (mode === "create")
+        setForm({ ...form, nama: "", username: "", email: "", password: "" });
       router.refresh();
     });
   }
@@ -99,13 +104,28 @@ export function UserForm({ mode = "create", initial }: { mode?: "create" | "edit
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              value={form.username}
+              onChange={(e) => setForm({ ...form, username: e.target.value })}
+              required
+              autoCapitalize="none"
+              spellCheck={false}
+              placeholder="mis. budi.santoso"
+            />
+            <p className="text-xs text-muted-foreground">
+              Dipakai untuk login. Huruf kecil, angka, titik, garis bawah, atau strip.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email (opsional)</Label>
             <Input
               id="email"
               type="email"
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
-              required
+              placeholder="nama@kantor.go.id"
             />
           </div>
           <div className="space-y-2">

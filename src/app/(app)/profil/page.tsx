@@ -21,7 +21,7 @@ export default async function ProfilPage() {
   if (!session) return null;
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { nama: true, email: true, role: true, createdAt: true },
+    select: { nama: true, username: true, email: true, role: true, createdAt: true },
   });
   if (!user) return null;
 
@@ -41,7 +41,10 @@ export default async function ProfilPage() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="font-heading font-semibold tracking-tight">{user.nama}</p>
-            <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+            <p className="truncate text-sm text-muted-foreground">
+              @{user.username}
+              {user.email ? ` · ${user.email}` : ""}
+            </p>
           </div>
           <div className="flex flex-col items-end gap-1">
             <Badge variant="info">{ROLE_LABEL[user.role] ?? user.role}</Badge>
@@ -56,7 +59,12 @@ export default async function ProfilPage() {
         <Card>
           <CardContent>
             <FormProfil
-              initial={{ nama: user.nama, email: user.email, role: ROLE_LABEL[user.role] ?? user.role }}
+              initial={{
+                nama: user.nama,
+                username: user.username,
+                email: user.email ?? "",
+                role: ROLE_LABEL[user.role] ?? user.role,
+              }}
             />
           </CardContent>
         </Card>

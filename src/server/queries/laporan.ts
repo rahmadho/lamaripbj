@@ -6,6 +6,7 @@ export async function getSemuaUser() {
     select: {
       id: true,
       nama: true,
+      username: true,
       email: true,
       role: true,
       aktif: true,

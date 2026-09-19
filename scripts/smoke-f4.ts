@@ -3,9 +3,9 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@kantor.go.id" } });
+  const admin = await prisma.user.findUniqueOrThrow({ where: { username: "admin" } });
   const fungsional = await prisma.user.findUniqueOrThrow({
-    where: { email: "fungsional@kantor.go.id" },
+    where: { username: "fungsional" },
   });
 
   // bersihkan

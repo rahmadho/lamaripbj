@@ -16,7 +16,7 @@ import {
 import { createGrup, updateGrup, deleteGrup } from "@/server/actions/grup";
 import { Check, Search, X } from "lucide-react";
 
-type Kandidat = { id: string; nama: string; email: string };
+type Kandidat = { id: string; nama: string; username: string; email: string | null };
 
 export function GrupForm({
   mode = "create",
@@ -47,7 +47,10 @@ export function GrupForm({
   const kata = cari.trim().toLowerCase();
   const tampil = kata
     ? kandidat.filter(
-        (k) => k.nama.toLowerCase().includes(kata) || k.email.toLowerCase().includes(kata)
+        (k) =>
+          k.nama.toLowerCase().includes(kata) ||
+          k.username.toLowerCase().includes(kata) ||
+          (k.email?.toLowerCase().includes(kata) ?? false)
       )
     : kandidat;
 
@@ -144,7 +147,7 @@ export function GrupForm({
                     type="search"
                     value={cari}
                     onChange={(e) => setCari(e.target.value)}
-                    placeholder="Cari nama atau email…"
+                    placeholder="Cari nama, username, atau email…"
                     aria-label="Cari calon anggota"
                     className="pl-8"
                   />
@@ -191,7 +194,8 @@ export function GrupForm({
                           <span className="min-w-0 flex-1">
                             <span className="block truncate font-medium leading-tight">{k.nama}</span>
                             <span className="block truncate text-xs text-muted-foreground">
-                              {k.email}
+                              @{k.username}
+                              {k.email ? ` · ${k.email}` : ""}
                             </span>
                           </span>
                           {aktif && (

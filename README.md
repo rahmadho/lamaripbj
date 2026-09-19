@@ -115,14 +115,15 @@ npm run dev                # http://localhost:3000
 ```
 
 ### Akun seed (password semua: `password123`)
-| Email | Role |
+| Username | Role |
 |---|---|
-| `admin@kantor.go.id` | Admin |
-| `pimpinan@kantor.go.id` | Pimpinan |
-| `fungsional@kantor.go.id` | Pejabat Fungsional |
-| `staff@kantor.go.id` | Staff |
-| `uploader@kantor.go.id` | Uploader |
+| `admin` | Admin |
+| `pimpinan` | Pimpinan |
+| `fungsional` | Pejabat Fungsional |
+| `staff` | Staff |
+| `uploader` | Uploader |
 
+> Login memakai **username**. Email tetap tersimpan sebagai data kontak (opsional).
 > **Ganti password seed sebelum dipakai di lingkungan sungguhan.**
 
 ### Perintah lain

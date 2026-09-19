@@ -32,7 +32,7 @@ function Pesan({ tipe, isi }: { tipe: "ok" | "err"; isi: string }) {
 export function FormProfil({
   initial,
 }: {
-  initial: { nama: string; email: string; role: string };
+  initial: { nama: string; username: string; email: string; role: string };
 }) {
   const router = useRouter();
   const [nama, setNama] = useState(initial.nama);
@@ -74,17 +74,23 @@ export function FormProfil({
         />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="profil-email">Email</Label>
+        <Label htmlFor="profil-username">Username</Label>
+        <Input id="profil-username" value={initial.username} readOnly disabled />
+        <p className="text-xs text-muted-foreground">
+          Username dipakai untuk login dan hanya bisa diubah admin.
+        </p>
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="profil-email">Email (opsional)</Label>
         <Input
           id="profil-email"
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          required
           autoComplete="email"
         />
         <p className="text-xs text-muted-foreground">
-          Email dipakai untuk login. Role {initial.role} hanya bisa diubah admin.
+          Email hanya sebagai kontak. Role {initial.role} hanya bisa diubah admin.
         </p>
       </div>
 

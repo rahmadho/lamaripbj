@@ -5,16 +5,17 @@ const prisma = new PrismaClient();
 
 async function main() {
   // user CRUD
-  await prisma.user.deleteMany({ where: { email: "uji-f5@kantor.go.id" } });
+  await prisma.user.deleteMany({ where: { username: "uji-f5" } });
   const user = await prisma.user.create({
     data: {
       nama: "UJI-F5 User",
+      username: "uji-f5",
       email: "uji-f5@kantor.go.id",
       role: "STAFF",
       passwordHash: await bcrypt.hash("rahasia123", 10),
     },
   });
-  console.log("user dibuat:", user.email, user.role);
+  console.log("user dibuat:", user.username, user.role);
 
   const updated = await prisma.user.update({
     where: { id: user.id },

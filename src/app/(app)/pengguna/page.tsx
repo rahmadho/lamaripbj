@@ -39,6 +39,7 @@ export default async function PenggunaPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Nama</TableHead>
+            <TableHead>Username</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Arsip</TableHead>
@@ -50,7 +51,8 @@ export default async function PenggunaPage() {
           {users.map((u) => (
             <TableRow key={u.id}>
               <TableCell className="font-medium">{u.nama}</TableCell>
-              <TableCell className="text-muted-foreground">{u.email}</TableCell>
+              <TableCell className="font-mono text-xs text-foreground">{u.username}</TableCell>
+              <TableCell className="text-muted-foreground">{u.email ?? "—"}</TableCell>
               <TableCell>
                 <Badge variant="info">{ROLE_LABEL[u.role] ?? u.role}</Badge>
               </TableCell>
@@ -66,6 +68,7 @@ export default async function PenggunaPage() {
                   initial={{
                     id: u.id,
                     nama: u.nama,
+                    username: u.username,
                     email: u.email,
                     role: u.role,
                     aktif: u.aktif,

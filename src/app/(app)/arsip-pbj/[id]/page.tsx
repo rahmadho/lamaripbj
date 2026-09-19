@@ -29,7 +29,7 @@ export default async function DetailArsipPbjPage({
     getArsipPbj(id),
     prisma.user.findMany({
       where: { aktif: true, role: "PEJABAT_FUNGSIONAL" },
-      select: { id: true, nama: true },
+      select: { id: true, nama: true, username: true },
       orderBy: { nama: "asc" },
     }),
     prisma.grup.findMany({ select: { id: true, nama: true }, orderBy: { nama: "asc" } }),

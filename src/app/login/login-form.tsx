@@ -15,7 +15,7 @@ import { AlertCircle, BookOpen, Phone, ShieldCheck } from "lucide-react";
 export default function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -25,7 +25,7 @@ export default function LoginForm() {
     setLoading(true);
     setError(null);
     const res = await signIn("credentials", {
-      email,
+      username,
       password,
       redirect: false,
     });
@@ -34,7 +34,7 @@ export default function LoginForm() {
       if (res.code === "configuration" || res.error === "Configuration") {
         setError("Terlalu banyak percobaan login. Silakan tunggu sebentar lalu coba lagi.");
       } else {
-        setError("Email atau password salah");
+        setError("Username atau password salah");
       }
       return;
     }
@@ -169,17 +169,19 @@ export default function LoginForm() {
 
           <form onSubmit={onSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <Label htmlFor="email" className="label-caps text-muted-foreground">
-                Email
+              <Label htmlFor="username" className="label-caps text-muted-foreground">
+                Username
               </Label>
               <Input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 autoComplete="username"
-                placeholder="nama@kantor.go.id"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="mis. admin"
               />
             </div>
             <div className="space-y-1.5">

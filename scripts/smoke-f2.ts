@@ -3,7 +3,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 async function main() {
-  const admin = await prisma.user.findUniqueOrThrow({ where: { email: "admin@kantor.go.id" } });
+  const admin = await prisma.user.findUniqueOrThrow({ where: { username: "admin" } });
 
   await prisma.arsipPegawai.deleteMany({ where: { direktori: { nama: { startsWith: "UJI-" } } } });
   await prisma.direktori.deleteMany({ where: { nama: { startsWith: "UJI-" } } });

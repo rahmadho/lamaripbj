@@ -19,7 +19,7 @@ export async function getSemuaGrup() {
 export async function getKandidatAnggotaGrup() {
   return prisma.user.findMany({
     where: { aktif: true, role: "PEJABAT_FUNGSIONAL" },
-    select: { id: true, nama: true, email: true },
+    select: { id: true, nama: true, username: true, email: true },
     orderBy: { nama: "asc" },
   });
 }

@@ -11,16 +11,38 @@ type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
 
 const RoleEnum = z.enum(["ADMIN", "PIMPINAN", "PEJABAT_FUNGSIONAL", "STAFF", "UPLOADER"]);
 
+const USERNAME_RE = /^[a-z0-9._-]+$/;
+const usernameField = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .min(3, "Username minimal 3 karakter")
+  .max(50, "Username maksimal 50 karakter")
+  .regex(USERNAME_RE, "Username hanya boleh huruf, angka, titik, garis bawah, atau strip");
+
+// Email opsional: dipakai sebagai kontak/profil, bukan lagi untuk login.
+const emailField = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .email("Email tidak valid")
+  .max(150)
+  .optional()
+  .or(z.literal(""))
+  .transform((v) => (v ? v : null));
+
 const createSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi").max(150),
-  email: z.string().email("Email tidak valid").toLowerCase(),
+  username: usernameField,
+  email: emailField,
   role: RoleEnum,
   password: z.string().min(6, "Password minimal 6 karakter"),
 });
 
 const updateSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi").max(150),
-  email: z.string().email("Email tidak valid").toLowerCase(),
+  username: usernameField,
+  email: emailField,
   role: RoleEnum,
   aktif: z.boolean(),
   password: z.string().min(6).optional().or(z.literal("")),
@@ -34,6 +56,7 @@ export async function createUser(input: unknown): Promise<ActionResult> {
     const user = await prisma.user.create({
       data: {
         nama: parsed.nama,
+        username: parsed.username,
         email: parsed.email,
         role: parsed.role,
         passwordHash,
@@ -44,7 +67,7 @@ export async function createUser(input: unknown): Promise<ActionResult> {
       aksi: "CREATE",
       entitas: "User",
       entitasId: user.id,
-      detail: { email: parsed.email, role: parsed.role },
+      detail: { username: parsed.username, role: parsed.role },
     });
     revalidatePath("/pengguna");
     return { ok: true, id: user.id };
@@ -59,6 +82,7 @@ export async function updateUser(id: string, input: unknown): Promise<ActionResu
     const parsed = updateSchema.parse(input);
     const data: Record<string, unknown> = {
       nama: parsed.nama,
+      username: parsed.username,
       email: parsed.email,
       role: parsed.role,
       aktif: parsed.aktif,
@@ -76,7 +100,7 @@ export async function updateUser(id: string, input: unknown): Promise<ActionResu
       aksi: "UPDATE",
       entitas: "User",
       entitasId: id,
-      detail: { email: parsed.email, role: parsed.role, aktif: parsed.aktif },
+      detail: { username: parsed.username, role: parsed.role, aktif: parsed.aktif },
     });
     revalidatePath("/pengguna");
     return { ok: true };
@@ -108,18 +132,20 @@ export async function toggleAktifUser(id: string, aktif: boolean): Promise<Actio
 
 const profilSchema = z.object({
   nama: z.string().min(1, "Nama wajib diisi").max(150),
-  email: z.string().email("Email tidak valid").toLowerCase(),
+  email: emailField,
 });
 
 export async function updateProfilSendiri(input: unknown): Promise<ActionResult> {
   try {
     const session = await requireSession();
     const parsed = profilSchema.parse(input);
-    const bentrok = await prisma.user.findFirst({
-      where: { email: parsed.email, id: { not: session.user.id } },
-      select: { id: true },
-    });
-    if (bentrok) return { ok: false, error: "Email sudah dipakai pengguna lain" };
+    if (parsed.email) {
+      const bentrok = await prisma.user.findFirst({
+        where: { email: parsed.email, id: { not: session.user.id } },
+        select: { id: true },
+      });
+      if (bentrok) return { ok: false, error: "Email sudah dipakai pengguna lain" };
+    }
     await prisma.user.update({
       where: { id: session.user.id },
       data: { nama: parsed.nama, email: parsed.email },
@@ -175,7 +201,7 @@ function errMsg(e: unknown): string {
       const err = e as unknown as { errors?: { message: string }[] };
       return err.errors?.[0]?.message ?? "Input tidak valid";
     }
-    if (e.message.includes("Unique constraint")) return "Email sudah dipakai";
+    if (e.message.includes("Unique constraint")) return "Username atau email sudah dipakai";
     return e.message;
   }
   return "Terjadi kesalahan";

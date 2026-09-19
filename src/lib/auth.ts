@@ -23,19 +23,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        username: { label: "Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(creds) {
-        const email = creds?.email?.toString().trim().toLowerCase();
+        const username = creds?.username?.toString().trim().toLowerCase();
         const password = creds?.password?.toString();
-        if (!email || !password) return null;
+        if (!username || !password) return null;
 
         const ip = await ambilIp();
         // Dua bucket: per-IP (batas lintas akun, anti credential-stuffing) dan
-        // per-IP+email (batas per akun). Cek keduanya.
+        // per-IP+username (batas per akun). Cek keduanya.
         const limitIp = cekRateLimit(`login-ip:${ip}`, MAX_ATTEMPTS_IP);
-        const limit = cekRateLimit(`login:${ip}:${email}`);
+        const limit = cekRateLimit(`login:${ip}:${username}`);
         if (!limit.ok || !limitIp.ok) {
           const detik = Math.max(limit.detikTunggu, limitIp.detikTunggu);
           throw new Error(
@@ -43,14 +43,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           );
         }
 
-        const user = await prisma.user.findUnique({ where: { email } });
+        const user = await prisma.user.findUnique({ where: { username } });
         if (!user || !user.aktif) return null;
         const ok = await bcrypt.compare(password, user.passwordHash);
         if (!ok) return null;
 
-        resetRateLimit(`login:${ip}:${email}`);
+        resetRateLimit(`login:${ip}:${username}`);
         resetRateLimit(`login-ip:${ip}`);
-        return { id: user.id, name: user.nama, email: user.email };
+        return { id: user.id, name: user.nama, email: user.email ?? undefined };
       },
     }),
   ],
