@@ -40,11 +40,11 @@ export default function PanduanPage() {
             </p>
           </div>
           <div className="flex flex-col justify-center gap-2 sm:flex-row">
-            <Button render={<Link href="/login" />}>
+            <Button nativeButton={false} render={<Link href="/login" />}>
               <ArrowLeft className="size-4" aria-hidden="true" />
               Kembali ke Login
             </Button>
-            <Button variant="outline" render={<Link href="/hubungi-kami" />}>
+            <Button nativeButton={false} variant="outline" render={<Link href="/hubungi-kami" />}>
               Hubungi Kami
             </Button>
           </div>

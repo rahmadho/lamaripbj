@@ -4,7 +4,7 @@ import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/db";
-import { cekRateLimit, resetRateLimit } from "@/lib/rate-limit";
+import { cekRateLimit, resetRateLimit, MAX_ATTEMPTS_IP } from "@/lib/rate-limit";
 
 async function ambilIp(): Promise<string> {
   try {
@@ -32,10 +32,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!email || !password) return null;
 
         const ip = await ambilIp();
+        // Dua bucket: per-IP (batas lintas akun, anti credential-stuffing) dan
+        // per-IP+email (batas per akun). Cek keduanya.
+        const limitIp = cekRateLimit(`login-ip:${ip}`, MAX_ATTEMPTS_IP);
         const limit = cekRateLimit(`login:${ip}:${email}`);
-        if (!limit.ok) {
+        if (!limit.ok || !limitIp.ok) {
+          const detik = Math.max(limit.detikTunggu, limitIp.detikTunggu);
           throw new Error(
-            `Terlalu banyak percobaan login. Coba lagi dalam ${limit.detikTunggu} detik.`
+            `Terlalu banyak percobaan login. Coba lagi dalam ${detik} detik.`
           );
         }
 
@@ -45,19 +49,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!ok) return null;
 
         resetRateLimit(`login:${ip}:${email}`);
+        resetRateLimit(`login-ip:${ip}`);
         return { id: user.id, name: user.nama, email: user.email };
       },
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
-        const dbUser = await prisma.user.findUnique({
-          where: { id: user.id ?? "" },
-          select: { role: true },
-        });
-        token.role = dbUser?.role ?? "STAFF";
         token.uid = user.id;
+      }
+      // Refresh ringan: muat role dari DB saat login ATAU saat sesi di-refresh,
+      // supaya perubahan role / penonaktifan user berlaku tanpa menunggu logout.
+      if (user || trigger === "update") {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: (user?.id ?? token.uid) as string },
+          select: { role: true, aktif: true },
+        });
+        if (dbUser) {
+          token.role = dbUser.role;
+          token.aktif = dbUser.aktif;
+        }
       }
       return token;
     },
@@ -65,6 +77,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (session.user) {
         session.user.id = token.uid as string;
         session.user.role = token.role as string;
+      }
+      // Tolak sesi user yang sudah dinonaktifkan.
+      if (token.aktif === false) {
+        return { ...session, expires: new Date(0).toISOString() };
       }
       return session;
     },

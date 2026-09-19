@@ -18,8 +18,10 @@ export default function TidakBerhakPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center gap-2">
-          <Button render={<Link href="/dashboard" />}>Ke Dashboard</Button>
-          <Button variant="outline" render={<Link href="/dibagikan" />}>
+          <Button nativeButton={false} render={<Link href="/dashboard" />}>
+            Ke Dashboard
+          </Button>
+          <Button nativeButton={false} variant="outline" render={<Link href="/dibagikan" />}>
             Arsip Dibagikan
           </Button>
         </CardContent>

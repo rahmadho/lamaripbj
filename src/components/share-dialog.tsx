@@ -62,7 +62,7 @@ export function ShareDialog({
   trigger,
 }: {
   subjek: { direktoriId?: string; arsipPegawaiId?: string; arsipPbjId?: string };
-  users: { id: string; nama: string; email: string }[];
+  users: { id: string; nama: string; email?: string }[];
   grups: { id: string; nama: string }[];
   trigger: React.ReactNode;
 }) {
@@ -125,7 +125,9 @@ export function ShareDialog({
   const kata = cari.trim().toLowerCase();
   const userTampil = kata
     ? users.filter(
-        (u) => u.nama.toLowerCase().includes(kata) || u.email.toLowerCase().includes(kata)
+        (u) =>
+          u.nama.toLowerCase().includes(kata) ||
+          (u.email?.toLowerCase().includes(kata) ?? false)
       )
     : users;
 
@@ -395,7 +397,7 @@ export function ShareDialog({
                         <span className="min-w-0 flex-1">
                           <span className="block truncate font-medium leading-tight">{u.nama}</span>
                           <span className="block truncate text-xs text-muted-foreground">
-                            {u.email}
+                            {u.email ?? "Pejabat Pengadaan"}
                           </span>
                         </span>
                         {aktif && (
@@ -546,8 +548,8 @@ function PanelUser({
 }: {
   cari: string;
   setCari: (v: string) => void;
-  userTampil: { id: string; nama: string; email: string }[];
-  users: { id: string; nama: string; email: string }[];
+  userTampil: { id: string; nama: string; email?: string }[];
+  users: { id: string; nama: string; email?: string }[];
   userIds: string[];
   toggleUser: (id: string) => void;
 }) {
@@ -607,7 +609,7 @@ function PanelUser({
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate font-medium leading-tight">{u.nama}</span>
-                  <span className="block truncate text-xs text-muted-foreground">{u.email}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{u.email ?? "Pejabat Pengadaan"}</span>
                 </span>
                 {aktif && <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />}
               </label>

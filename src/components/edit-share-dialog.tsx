@@ -41,7 +41,7 @@ export function EditShareDialog({
 }: {
   arsipPbjId: string;
   shares: Share[];
-  users: { id: string; nama: string; email: string }[];
+  users: { id: string; nama: string }[];
   grups: { id: string; nama: string }[];
   trigger: React.ReactNode;
 }) {
@@ -73,7 +73,7 @@ function IsiForm({
 }: {
   arsipPbjId: string;
   shares: Share[];
-  users: { id: string; nama: string; email: string }[];
+  users: { id: string; nama: string }[];
   grups: { id: string; nama: string }[];
   tutup: () => void;
 }) {
@@ -101,12 +101,7 @@ function IsiForm({
 
   const kata = cari.trim().toLowerCase();
   const userTampil = useMemo(
-    () =>
-      kata
-        ? users.filter(
-            (x) => x.nama.toLowerCase().includes(kata) || x.email.toLowerCase().includes(kata)
-          )
-        : users,
+    () => (kata ? users.filter((x) => x.nama.toLowerCase().includes(kata)) : users),
     [users, kata]
   );
 
@@ -237,7 +232,7 @@ function IsiForm({
                 type="search"
                 value={cari}
                 onChange={(e) => setCari(e.target.value)}
-                placeholder="Cari nama/email…"
+                placeholder="Cari nama…"
                 aria-label="Cari pengguna"
                 className="pl-8"
               />
@@ -274,7 +269,7 @@ function IsiForm({
                       <span className="min-w-0 flex-1">
                         <span className="block truncate font-medium leading-tight">{u.nama}</span>
                         <span className="block truncate text-xs text-muted-foreground">
-                          {u.email}
+                          Pejabat Pengadaan
                         </span>
                       </span>
                       {aktif && <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />}

@@ -6,6 +6,7 @@ import { prisma } from "@/lib/db";
 import { requireSession } from "@/lib/session";
 import { saveFile, validateFile } from "@/lib/storage";
 import { logAudit } from "@/server/audit";
+import { hapusFisikBestEffort } from "@/server/file-cleanup";
 import { getByKode, PaketApiError, type TipePaketValue } from "@/lib/paket";
 import type { JenisPengadaan, Role } from "@prisma/client";
 
@@ -374,14 +375,24 @@ export async function deleteArsipPbj(id: string): Promise<ActionResult> {
     const session = await requireSession();
     const arsip = await prisma.arsipPbj.findUnique({
       where: { id },
-      select: { createdById: true, fileId: true },
+      select: {
+        createdById: true,
+        fileId: true,
+        file: { select: { storedName: true } },
+      },
     });
     if (!arsip) return { ok: false, error: "Arsip tidak ditemukan" };
     if (session.user.role !== "ADMIN" && arsip.createdById !== session.user.id) {
       return { ok: false, error: "Tidak berhak menghapus arsip ini" };
     }
-    await prisma.arsipPbj.delete({ where: { id } });
-    await prisma.fileObj.delete({ where: { id: arsip.fileId } }).catch(() => {});
+
+    await prisma.$transaction([
+      prisma.arsipPbj.delete({ where: { id } }),
+      prisma.fileObj.delete({ where: { id: arsip.fileId } }),
+    ]);
+
+    await hapusFisikBestEffort(arsip.file.storedName, session.user.id, "ArsipPbj", id);
+
     await logAudit({
       userId: session.user.id,
       aksi: "DELETE",

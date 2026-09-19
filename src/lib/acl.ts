@@ -30,19 +30,30 @@ async function izinEfektifDirektori(
   role: Role,
   chainIds: string[]
 ): Promise<Izin[]> {
+  if (chainIds.length === 0) return [];
+
+  // Satu query untuk seluruh rantai; urutan chainIds menentukan direktori mana
+  // yang paling dekat (share terdekat menghentikan warisan).
+  const semua = await prisma.shareEntry.findMany({
+    where: { direktoriId: { in: chainIds }, OR: userClause(userId, role) },
+    select: { direktoriId: true, izin: true, level: true },
+  });
+  if (semua.length === 0) return [];
+
+  const perDir = new Map<string, { izin: Izin[]; level: string }[]>();
+  for (const s of semua) {
+    if (!s.direktoriId) continue;
+    const arr = perDir.get(s.direktoriId) ?? [];
+    arr.push({ izin: s.izin as Izin[], level: s.level });
+    perDir.set(s.direktoriId, arr);
+  }
+
   for (const dirId of chainIds) {
-    const shares = await prisma.shareEntry.findMany({
-      where: {
-        direktoriId: dirId,
-        OR: userClause(userId, role),
-      },
-      select: { izin: true, level: true },
-    });
-    if (shares.length > 0) {
+    const shares = perDir.get(dirId);
+    if (shares && shares.length > 0) {
       const gabungan = new Set<Izin>();
       for (const s of shares) {
-        const izin: Izin[] =
-          s.izin.length > 0 ? (s.izin as Izin[]) : izinDariLevel(s.level);
+        const izin: Izin[] = s.izin.length > 0 ? s.izin : izinDariLevel(s.level);
         izin.forEach((i) => gabungan.add(i));
       }
       return [...gabungan];

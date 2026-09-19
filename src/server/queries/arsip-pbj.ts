@@ -3,54 +3,6 @@ import { prisma } from "@/lib/db";
 import type { Session } from "next-auth";
 import type { Role, JenisPengadaan, Prisma } from "@prisma/client";
 
-const visibleFilter = (uid: string, role: Role) =>
-  role === "ADMIN" || role === "PIMPINAN"
-    ? {}
-    : {
-        OR: [
-          { createdById: uid },
-          { shares: { some: { userId: uid } } },
-          { shares: { some: { role } } },
-          { shares: { some: { grup: { anggota: { some: { userId: uid } } } } } },
-          { shares: { some: { semuaUser: true } } },
-        ],
-      };
-
-export async function getDaftarArsipPbj(
-  session: Session,
-  filter: {
-    jenisPengadaan?: JenisPengadaan;
-    metodePengadaan?: string;
-    tahun?: number;
-    kodePaket?: string;
-    namaPaket?: string;
-  } = {}
-) {
-  const uid = session.user.id;
-  const role = session.user.role as Role;
-  return prisma.arsipPbj.findMany({
-    where: {
-      AND: [
-        visibleFilter(uid, role),
-        filter.jenisPengadaan ? { jenisPengadaan: filter.jenisPengadaan } : {},
-        filter.metodePengadaan ? { metodePengadaan: filter.metodePengadaan } : {},
-        filter.tahun ? { tahun: filter.tahun } : {},
-        filter.kodePaket ? { paketKode: { contains: filter.kodePaket, mode: "insensitive" } } : {},
-        filter.namaPaket
-          ? { paketNama: { contains: filter.namaPaket, mode: "insensitive" } }
-          : {},
-      ],
-    },
-    include: {
-      file: true,
-      createdBy: { select: { nama: true } },
-      taksonomiJenisDoc: { select: { nama: true } },
-    },
-    orderBy: { createdAt: "desc" },
-    take: 200,
-  });
-}
-
 export async function getArsipPbj(id: string) {
   return prisma.arsipPbj.findUnique({
     where: { id },
@@ -209,21 +161,42 @@ export async function getDaftarPaketPbj(
     prisma.paketPbj.count({ where }),
   ]);
 
-  // Slot dokumen yang diharapkan per (jenis, metode) — kumpulkan sekali.
-  const kunciKlas = new Set(
-    paketRows.map((p) => `${p.jenisPengadaan}|${p.metodePengadaan}`)
-  );
-  const slotPerKlas = new Map<
-    string,
-    { taksonomiJenisDocId: string; nama: string }[]
-  >();
-  for (const k of kunciKlas) {
-    const [jenis, metode] = k.split("|");
-    const cocok = await getJenisDocCocok(jenis as JenisPengadaan, metode);
-    slotPerKlas.set(
-      k,
-      cocok.map((c) => ({ taksonomiJenisDocId: c.id, nama: c.nama }))
-    );
+  // Slot dokumen yang diharapkan per (jenis, metode) — SATU query untuk semua
+  // kombinasi (hindari N+1), lalu cocokkan di memori.
+  const kunciKlas = new Set(paketRows.map((p) => `${p.jenisPengadaan}|${p.metodePengadaan}`));
+  const jenisSet = [...new Set([...kunciKlas].map((k) => k.split("|")[0]))] as JenisPengadaan[];
+  const metodeSet = [...new Set([...kunciKlas].map((k) => k.split("|")[1]))];
+  const slotPerKlas = new Map<string, { taksonomiJenisDocId: string; nama: string }[]>();
+
+  if (kunciKlas.size > 0) {
+    const petaAll = await prisma.taksonomiPeta.findMany({
+      where: {
+        OR: [
+          { jenisPengadaan: null, metodePengadaan: null },
+          { jenisPengadaan: { in: jenisSet }, metodePengadaan: null },
+          { jenisPengadaan: null, metodePengadaan: { in: metodeSet } },
+          { jenisPengadaan: { in: jenisSet }, metodePengadaan: { in: metodeSet } },
+        ],
+      },
+      include: { taksonomiJenisDoc: { select: { id: true, nama: true } } },
+    });
+
+    for (const k of kunciKlas) {
+      const [jenis, metode] = k.split("|");
+      const map = new Map<string, { id: string; nama: string }>();
+      for (const p of petaAll) {
+        const cocok =
+          (p.jenisPengadaan === null || p.jenisPengadaan === jenis) &&
+          (p.metodePengadaan === null || p.metodePengadaan === metode);
+        if (cocok) map.set(p.taksonomiJenisDoc.id, p.taksonomiJenisDoc);
+      }
+      slotPerKlas.set(
+        k,
+        [...map.values()]
+          .sort((a, b) => a.nama.localeCompare(b.nama))
+          .map((c) => ({ taksonomiJenisDocId: c.id, nama: c.nama }))
+      );
+    }
   }
 
   const data = paketRows.map((p) => {

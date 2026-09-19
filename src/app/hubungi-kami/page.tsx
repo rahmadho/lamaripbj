@@ -105,7 +105,7 @@ export default function HubungiKamiPage() {
           </ul>
 
           <div className="text-center">
-            <Button variant="outline" render={<Link href="/login" />}>
+            <Button nativeButton={false} variant="outline" render={<Link href="/login" />}>
               <ArrowLeft className="size-4" aria-hidden="true" />
               Kembali ke Login
             </Button>

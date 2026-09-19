@@ -8,6 +8,7 @@ import { z } from "zod";
 import { arsipPegawaiSchema, shareSchema, PermissionEnum } from "@/lib/validators";
 import { saveFile, validateFile } from "@/lib/storage";
 import { logAudit } from "@/server/audit";
+import { hapusFisikBestEffort } from "@/server/file-cleanup";
 import { canUploadTo } from "@/server/queries/direktori";
 import type { PermissionLevel } from "@prisma/client";
 import { izinValid, levelDariIzin } from "@/lib/izin";
@@ -66,7 +67,12 @@ export async function deleteArsipPegawai(id: string): Promise<ActionResult> {
     const session = await requireSession();
     const arsip = await prisma.arsipPegawai.findUnique({
       where: { id },
-      select: { createdById: true, direktoriId: true, fileId: true },
+      select: {
+        createdById: true,
+        direktoriId: true,
+        fileId: true,
+        file: { select: { storedName: true } },
+      },
     });
     if (!arsip) return { ok: false, error: "Arsip tidak ditemukan" };
     // admin, pembuat arsip, atau pemegang izin DELETE di direktori induk
@@ -77,8 +83,15 @@ export async function deleteArsipPegawai(id: string): Promise<ActionResult> {
     if (!izinHapus) {
       return { ok: false, error: "Tidak berhak menghapus arsip ini" };
     }
-    await prisma.arsipPegawai.delete({ where: { id } });
-    await prisma.fileObj.delete({ where: { id: arsip.fileId } }).catch(() => {});
+
+    // DB dulu (atomik), lalu hapus fisik best-effort setelah commit.
+    await prisma.$transaction([
+      prisma.arsipPegawai.delete({ where: { id } }),
+      prisma.fileObj.delete({ where: { id: arsip.fileId } }),
+    ]);
+
+    await hapusFisikBestEffort(arsip.file.storedName, session.user.id, "ArsipPegawai", id);
+
     await logAudit({
       userId: session.user.id,
       aksi: "DELETE",

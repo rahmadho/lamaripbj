@@ -65,7 +65,7 @@ export function UploadArsipPbjForm() {
   // grup (opsional) & perorangan penerima share saat unggah
   const [grups, setGrups] = useState<{ id: string; nama: string }[]>([]);
   const [grupId, setGrupId] = useState("");
-  const [pengguna, setPengguna] = useState<{ id: string; nama: string; email: string; role: string }[]>([]);
+  const [pengguna, setPengguna] = useState<{ id: string; nama: string; role: string }[]>([]);
   const [penerimaIds, setPenerimaIds] = useState<string[]>([]);
   const [cariUser, setCariUser] = useState("");
 
@@ -379,7 +379,7 @@ export function UploadArsipPbjForm() {
                         type="search"
                         value={cariUser}
                         onChange={(e) => setCariUser(e.target.value)}
-                        placeholder="Cari nama/email…"
+                        placeholder="Cari nama…"
                         className="pl-8"
                       />
                     </div>
@@ -584,8 +584,8 @@ function BarisDokumen({
 }
 
 /**
- * Daftar perorangan penerima share: Pejabat Pengadaan diurut paling atas,
- * sisanya mengikuti abjad; difilter lewat kata kunci pencarian.
+ * Daftar perorangan penerima share: Pejabat Pengadaan (PEJABAT_FUNGSIONAL),
+ * diurut abjad; difilter lewat kata kunci pencarian nama.
  */
 function DaftarPenerima({
   pengguna,
@@ -593,7 +593,7 @@ function DaftarPenerima({
   onToggle,
   kata,
 }: {
-  pengguna: { id: string; nama: string; email: string; role: string }[];
+  pengguna: { id: string; nama: string; role: string }[];
   terpilih: string[];
   onToggle: (id: string) => void;
   kata: string;
@@ -606,9 +606,7 @@ function DaftarPenerima({
   }, [pengguna]);
 
   const tampil = kata
-    ? urut.filter(
-        (u) => u.nama.toLowerCase().includes(kata) || u.email.toLowerCase().includes(kata)
-      )
+    ? urut.filter((u) => u.nama.toLowerCase().includes(kata))
     : urut;
 
   return (
@@ -644,7 +642,7 @@ function DaftarPenerima({
               <span className="min-w-0 flex-1">
                 <span className="block truncate font-medium leading-tight">{u.nama}</span>
                 <span className="block truncate text-xs text-muted-foreground">
-                  {u.role === "PEJABAT_FUNGSIONAL" ? "Pejabat Pengadaan" : u.email}
+                  Pejabat Pengadaan
                 </span>
               </span>
               {aktif && <Check className="size-4 shrink-0 text-primary" aria-hidden="true" />}

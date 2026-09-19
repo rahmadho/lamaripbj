@@ -1,7 +1,25 @@
+import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { logAudit } from "@/server/audit";
-import type { JenisPengadaan, Role } from "@prisma/client";
+import type { Role } from "@prisma/client";
+
+// Batas eksplisit jumlah baris per ekspor — cegah konsumsi memori tak terbatas.
+const EXPORT_LIMIT = 5000;
+
+const JenisPengadaanEnum = z.enum([
+  "BARANG",
+  "KONSTRUKSI",
+  "JASA_KONSULTANSI",
+  "JASA_LAINNYA",
+]);
+
+const exportFilterSchema = z.object({
+  jenisPengadaan: JenisPengadaanEnum.optional(),
+  metode: z.string().max(100).optional(),
+  tahun: z.coerce.number().int().min(2000).max(2100).optional(),
+  kode: z.string().max(100).optional(),
+});
 
 function csvEscape(v: unknown): string {
   const s = v === null || v === undefined ? "" : String(v);
@@ -47,7 +65,7 @@ export async function GET(req: Request) {
         createdBy: { select: { nama: true } },
       },
       orderBy: { tanggal: "desc" },
-      take: 5000,
+      take: EXPORT_LIMIT,
     });
     csv = toCsv(
       ["Nomor Dokumen", "Nama Dokumen", "Tanggal", "Direktori", "Diunggah Oleh"],
@@ -61,6 +79,15 @@ export async function GET(req: Request) {
     );
     namaFile = `arsip-pegawai-${Date.now()}.csv`;
   } else {
+    // Validasi param dari klien (jangan percaya mentah) — buang yang tak valid.
+    const f = exportFilterSchema.safeParse({
+      jenisPengadaan: searchParams.get("jenisPengadaan") ?? undefined,
+      metode: searchParams.get("metode") ?? undefined,
+      tahun: searchParams.get("tahun") ?? undefined,
+      kode: searchParams.get("kode") ?? undefined,
+    });
+    const p = f.success ? f.data : {};
+
     const rows = await prisma.arsipPbj.findMany({
       where: {
         AND: [
@@ -75,14 +102,10 @@ export async function GET(req: Request) {
                   { shares: { some: { semuaUser: true } } },
                 ],
               },
-          searchParams.get("jenisPengadaan")
-            ? { jenisPengadaan: searchParams.get("jenisPengadaan") as JenisPengadaan }
-            : {},
-          searchParams.get("metode") ? { metodePengadaan: searchParams.get("metode")! } : {},
-          searchParams.get("tahun") ? { tahun: Number(searchParams.get("tahun")) } : {},
-          searchParams.get("kode")
-            ? { paketKode: { contains: searchParams.get("kode")!, mode: "insensitive" } }
-            : {},
+          p.jenisPengadaan ? { jenisPengadaan: p.jenisPengadaan } : {},
+          p.metode ? { metodePengadaan: p.metode } : {},
+          p.tahun ? { tahun: p.tahun } : {},
+          p.kode ? { paketKode: { contains: p.kode, mode: "insensitive" } } : {},
         ],
       },
       include: {
@@ -90,7 +113,7 @@ export async function GET(req: Request) {
         createdBy: { select: { nama: true } },
       },
       orderBy: { createdAt: "desc" },
-      take: 5000,
+      take: EXPORT_LIMIT,
     });
     csv = toCsv(
       [
@@ -128,6 +151,7 @@ export async function GET(req: Request) {
     headers: {
       "Content-Type": "text/csv; charset=utf-8",
       "Content-Disposition": `attachment; filename="${namaFile}"`,
+      "X-Export-Limit": String(EXPORT_LIMIT),
     },
   });
 }

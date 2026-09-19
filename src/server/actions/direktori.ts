@@ -6,6 +6,7 @@ import { requireSession } from "@/lib/session";
 import { canAccessDirektori } from "@/lib/acl";
 import { direktoriSchema } from "@/lib/validators";
 import { logAudit } from "@/server/audit";
+import { hapusFisikBestEffort } from "@/server/file-cleanup";
 import type { Role } from "@prisma/client";
 
 type ActionResult = { ok: true; id?: string } | { ok: false; error: string };
@@ -108,16 +109,32 @@ export async function deleteDirektori(id: string): Promise<ActionResult> {
     if (!izinHapus) {
       return { ok: false, error: "Tidak berhak menghapus direktori ini" };
     }
-    // hapus bertingkat (cascade via parentId tidak otomatis; kumpulkan descendants)
+
     const ids = await collectDescendants(id);
-    await prisma.arsipPegawai.deleteMany({ where: { direktoriId: { in: ids } } });
-    await prisma.direktori.deleteMany({ where: { id: { in: ids.reverse() } } });
+
+    // Kumpulkan storedName SEMUA arsip descendant SEBELUM deleteMany,
+    // agar objek fisik masih bisa dilacak setelah barisnya lenyap.
+    const arsipRows = await prisma.arsipPegawai.findMany({
+      where: { direktoriId: { in: ids } },
+      select: { fileId: true, file: { select: { storedName: true } } },
+    });
+
+    await prisma.$transaction([
+      prisma.arsipPegawai.deleteMany({ where: { direktoriId: { in: ids } } }),
+      prisma.fileObj.deleteMany({ where: { id: { in: arsipRows.map((a) => a.fileId) } } }),
+      prisma.direktori.deleteMany({ where: { id: { in: [...ids].reverse() } } }),
+    ]);
+
+    for (const a of arsipRows) {
+      await hapusFisikBestEffort(a.file.storedName, session.user.id, "Direktori", id);
+    }
+
     await logAudit({
       userId: session.user.id,
       aksi: "DELETE",
       entitas: "Direktori",
       entitasId: id,
-      detail: { nama: existing.nama, jumlahTerhapus: ids.length },
+      detail: { nama: existing.nama, jumlahTerhapus: ids.length, jumlahArsip: arsipRows.length },
     });
     revalidatePath("/arsip-pegawai");
     return { ok: true };

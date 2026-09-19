@@ -14,8 +14,12 @@ export default function NotFound() {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex justify-center gap-2">
-          <Button render={<Link href="/dashboard" />}>Ke Dashboard</Button>
-          <Button variant="outline" render={<Link href="/cari" />}>Cari Arsip</Button>
+          <Button nativeButton={false} render={<Link href="/dashboard" />}>
+            Ke Dashboard
+          </Button>
+          <Button nativeButton={false} variant="outline" render={<Link href="/cari" />}>
+            Cari Arsip
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -28,8 +28,8 @@ export default async function DetailArsipPbjPage({
   const [arsip, users, grups] = await Promise.all([
     getArsipPbj(id),
     prisma.user.findMany({
-      where: { aktif: true },
-      select: { id: true, nama: true, email: true },
+      where: { aktif: true, role: "PEJABAT_FUNGSIONAL" },
+      select: { id: true, nama: true },
       orderBy: { nama: "asc" },
     }),
     prisma.grup.findMany({ select: { id: true, nama: true }, orderBy: { nama: "asc" } }),
@@ -84,6 +84,7 @@ export default async function DetailArsipPbjPage({
             {bisaUnduh && (
               <Button
                 size="sm"
+                nativeButton={false}
                 render={
                   <a href={`/api/files/${arsip.fileId}?dl=1`} target="_blank" rel="noreferrer" />
                 }

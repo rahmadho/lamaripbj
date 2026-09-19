@@ -135,11 +135,21 @@ export function DashboardStats({
       {/* Aksi cepat */}
       <div className="flex flex-wrap items-center gap-2">
         <span className="label-caps mr-1 text-muted-foreground">Ekspor</span>
-        <Button size="sm" variant="outline" render={<a href="/api/export?jenis=pegawai" />}>
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={<a href="/api/export?jenis=pegawai" />}
+        >
           <Download className="size-3.5" aria-hidden="true" />
           Arsip Pegawai (CSV)
         </Button>
-        <Button size="sm" variant="outline" render={<a href="/api/export?jenis=pbj" />}>
+        <Button
+          size="sm"
+          variant="outline"
+          nativeButton={false}
+          render={<a href="/api/export?jenis=pbj" />}
+        >
           <Download className="size-3.5" aria-hidden="true" />
           Arsip PBJ (CSV)
         </Button>

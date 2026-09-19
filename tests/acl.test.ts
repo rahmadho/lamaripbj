@@ -85,7 +85,7 @@ describe("canAccessArsipPegawai", () => {
     mockPrisma.arsipPegawai.findUnique.mockResolvedValue({
       createdById: "u1",
       direktoriId: "d1",
-      direktori: { parentId: null, parent: null },
+      direktori: { id: "d1", parent: null },
     });
     expect(await canAccessArsipPegawai(sesi("u1", "STAFF"), "a1", "VIEW")).toBe(true);
   });
@@ -94,7 +94,7 @@ describe("canAccessArsipPegawai", () => {
     mockPrisma.arsipPegawai.findUnique.mockResolvedValue({
       createdById: "lain",
       direktoriId: "d2",
-      direktori: { parentId: "d1", parent: { parentId: null, parent: null } },
+      direktori: { id: "d2", parent: { id: "d1", parent: null } },
     });
     mockPrisma.shareEntry.findMany.mockResolvedValue([
       { izin: ["VIEW", "DOWNLOAD"], level: "DOWNLOAD", direktoriId: "d1" },
@@ -106,7 +106,7 @@ describe("canAccessArsipPegawai", () => {
     mockPrisma.arsipPegawai.findUnique.mockResolvedValue({
       createdById: "lain",
       direktoriId: "d2",
-      direktori: { parentId: null, parent: null },
+      direktori: { id: "d2", parent: null },
     });
     mockPrisma.shareEntry.findMany.mockResolvedValue([]);
     expect(await canAccessArsipPegawai(sesi("u9", "UPLOADER"), "a1", "VIEW")).toBe(false);
@@ -116,7 +116,7 @@ describe("canAccessArsipPegawai", () => {
     mockPrisma.arsipPegawai.findUnique.mockResolvedValue({
       createdById: "lain",
       direktoriId: "d2",
-      direktori: { parentId: "d1", parent: { parentId: null, parent: null } },
+      direktori: { id: "d2", parent: { id: "d1", parent: null } },
     });
     mockPrisma.shareEntry.findMany.mockResolvedValue([
       { izin: ["VIEW"], level: "VIEW", direktoriId: "d2" },
@@ -129,7 +129,7 @@ describe("canAccessArsipPegawai", () => {
     mockPrisma.arsipPegawai.findUnique.mockResolvedValue({
       createdById: "lain",
       direktoriId: "d2",
-      direktori: { parentId: "d1", parent: { parentId: null, parent: null } },
+      direktori: { id: "d2", parent: { id: "d1", parent: null } },
     });
     mockPrisma.shareEntry.findMany.mockResolvedValue([
       { izin: ["VIEW", "DOWNLOAD"], level: "DOWNLOAD", direktoriId: "d1" },
@@ -142,7 +142,7 @@ describe("canAccessArsipPegawai", () => {
     mockPrisma.arsipPegawai.findUnique.mockResolvedValue({
       createdById: "lain",
       direktoriId: "d2",
-      direktori: { parentId: null, parent: null },
+      direktori: { id: "d2", parent: null },
     });
     mockPrisma.shareEntry.findMany.mockResolvedValue([
       { izin: ["VIEW"], level: "VIEW", direktoriId: null },
@@ -151,22 +151,20 @@ describe("canAccessArsipPegawai", () => {
   });
 
   it("override: share sub (VIEW) menutup izin DOWNLOAD dari induk", async () => {
-    // arsip di sub (d2, anak d1). findMany pertama utk d2 -> VIEW;
+    // arsip di sub (d2, anak d1). Satu query mengambil share d2 & d1;
     // karena d2 PUNYA share, rantai berhenti & izin induk d1 tidak dipakai.
     mockPrisma.arsipPegawai.findUnique.mockResolvedValue({
       createdById: "lain",
       direktoriId: "d2",
-      direktori: { parentId: "d1", parent: { parentId: null, parent: null } },
+      direktori: { id: "d2", parent: { id: "d1", parent: null } },
     });
-    mockPrisma.shareEntry.findMany.mockImplementation(({ where }: never) => {
-      const id = (where as { direktoriId: string }).direktoriId;
-      if (id === "d2") return Promise.resolve([{ izin: ["VIEW"], level: "VIEW" }]);
-      if (id === "d1") return Promise.resolve([{ izin: ["DOWNLOAD"], level: "DOWNLOAD" }]);
-      return Promise.resolve([]);
-    });
+    mockPrisma.shareEntry.findMany.mockResolvedValue([
+      { izin: ["VIEW"], level: "VIEW", direktoriId: "d2" },
+      { izin: ["DOWNLOAD"], level: "DOWNLOAD", direktoriId: "d1" },
+    ]);
     expect(await canAccessArsipPegawai(sesi("u9", "STAFF"), "a1", "VIEW")).toBe(true);
     expect(await canAccessArsipPegawai(sesi("u9", "STAFF"), "a1", "DOWNLOAD")).toBe(false);
-    // hanya d2 yang di-query (berhenti di share pertama)
+    // satu query per pemanggilan (bukan per direktori dalam rantai)
     expect(mockPrisma.shareEntry.findMany).toHaveBeenCalledTimes(2);
   });
 
@@ -174,10 +172,10 @@ describe("canAccessArsipPegawai", () => {
     mockPrisma.arsipPegawai.findUnique.mockResolvedValue({
       createdById: "lain",
       direktoriId: "d2",
-      direktori: { parentId: null, parent: null },
+      direktori: { id: "d2", parent: null },
     });
     mockPrisma.shareEntry.findMany.mockResolvedValue([
-      { izin: ["VIEW", "UPLOAD", "CREATE_SUBDIR"], level: "DOWNLOAD" },
+      { izin: ["VIEW", "UPLOAD", "CREATE_SUBDIR"], level: "DOWNLOAD", direktoriId: "d2" },
     ]);
     expect(await canAccessArsipPegawai(sesi("u9", "STAFF"), "a1", "UPLOAD")).toBe(true);
     expect(await canAccessArsipPegawai(sesi("u9", "STAFF"), "a1", "CREATE_SUBDIR")).toBe(true);
@@ -190,7 +188,7 @@ describe("canAccessDirektori", () => {
   it("owner punya semua izin", async () => {
     mockPrisma.direktori.findUnique.mockResolvedValue({
       ownerId: "u1",
-      parentId: null,
+      id: "d1",
       parent: null,
     });
     expect(await canAccessDirektori(sesi("u1", "STAFF"), "d1", "DELETE")).toBe(true);
@@ -203,7 +201,7 @@ describe("canAccessDirektori", () => {
   it("bukan owner tanpa share ditolak", async () => {
     mockPrisma.direktori.findUnique.mockResolvedValue({
       ownerId: "lain",
-      parentId: null,
+      id: "d1",
       parent: null,
     });
     mockPrisma.shareEntry.findMany.mockResolvedValue([]);

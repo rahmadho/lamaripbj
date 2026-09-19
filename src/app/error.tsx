@@ -35,7 +35,7 @@ export default function Error({
           )}
           <div className="flex justify-center gap-2">
             <Button onClick={reset}>Coba Lagi</Button>
-            <Button variant="outline" render={<Link href="/dashboard" />}>
+            <Button nativeButton={false} variant="outline" render={<Link href="/dashboard" />}>
               Ke Dashboard
             </Button>
           </div>

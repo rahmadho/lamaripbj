@@ -69,6 +69,21 @@ describe("shareSchema — target majemuk", () => {
     expect(badGrupTunggal.success).toBe(true);
   });
 
+  it("PBJ boleh grup + perorangan sekaligus", () => {
+    const r = shareSchema.safeParse({
+      arsipPbjId: "a1",
+      level: "DOWNLOAD",
+      grupIds: ["g1"],
+      userIds: ["u1", "u2"],
+    });
+    expect(r.success).toBe(true);
+  });
+
+  it("PBJ tetap menolak tanpa penerima apa pun", () => {
+    const r = shareSchema.safeParse({ arsipPbjId: "a1", level: "VIEW" });
+    expect(r.success).toBe(false);
+  });
+
   it("grup dilarang untuk arsip pegawai", () => {
     const r = shareSchema.safeParse({ ...subjek, izin, grupIds: ["g1"] });
     expect(r.success).toBe(false);

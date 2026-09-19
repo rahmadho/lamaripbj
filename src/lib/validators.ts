@@ -59,17 +59,27 @@ export const shareSchema = z
     "Arsip PBJ dapat dibagikan ke grup dan/atau perorangan; grup hanya berlaku untuk arsip PBJ"
   )
   .refine(
-    (v) =>
-      [
-        v.userId,
-        v.grupId,
-        v.role,
-        v.semuaUser ? "semua" : undefined,
-        (v.userIds?.length ?? 0) > 0 ? "u" : undefined,
-        (v.grupIds?.length ?? 0) > 0 ? "g" : undefined,
-        (v.roles?.length ?? 0) > 0 ? "r" : undefined,
-      ].filter(Boolean).length === 1,
-    "Pilih satu jenis penerima saja"
+    (v) => {
+      // PBJ boleh kombinasi grup + perorangan sekaligus (Fase 25).
+      if (v.arsipPbjId) {
+        const adaGrup = !!v.grupId || (v.grupIds?.length ?? 0) > 0;
+        const adaUser = !!v.userId || (v.userIds?.length ?? 0) > 0;
+        return adaGrup || adaUser;
+      }
+      // non-PBJ: tepat satu jenis penerima
+      return (
+        [
+          v.userId,
+          v.grupId,
+          v.role,
+          v.semuaUser ? "semua" : undefined,
+          (v.userIds?.length ?? 0) > 0 ? "u" : undefined,
+          (v.grupIds?.length ?? 0) > 0 ? "g" : undefined,
+          (v.roles?.length ?? 0) > 0 ? "r" : undefined,
+        ].filter(Boolean).length === 1
+      );
+    },
+    "Pilih penerima dengan benar (PBJ: grup dan/atau perorangan)"
   )
   .refine(
     (v) => {
