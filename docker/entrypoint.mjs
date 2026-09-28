@@ -136,6 +136,18 @@ console.log("[entrypoint] menerapkan migrasi prisma...");
 }
 
 if ((process.env.DB_SEED ?? "false") === "true") {
+  // Pengaman berlapis: seed menimpa password akun seed, jadi berbahaya di
+  // produksi. Hanya izinkan bila pengguna menyatakan niat eksplisit lewat
+  // DB_SEED_ALLOW_PRODUCTION=true (mis. saat bootstrap pertama).
+  const allowProd = (process.env.DB_SEED_ALLOW_PRODUCTION ?? "false") === "true";
+  if (process.env.NODE_ENV === "production" && !allowProd) {
+    console.error(
+      "[entrypoint] MENOLAK seed: NODE_ENV=production & DB_SEED=true.\n" +
+        "  Seed menimpa password akun seed. Bila memang ingin bootstrap awal,\n" +
+        "  set DB_SEED_ALLOW_PRODUCTION=true sekali, lalu matikan DB_SEED."
+    );
+    process.exit(1);
+  }
   console.log("[entrypoint] DB_SEED=true — menjalankan seed...");
   // seed sudah dikompilasi ke JS saat build (lihat Dockerfile) karena tsx
   // tidak tersedia di runtime distroless.

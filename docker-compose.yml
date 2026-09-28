@@ -47,6 +47,9 @@ services:
       SIPEDAL_API_BASE: ${SIPEDAL_API_BASE:-https://sipedal.sumbarprov.go.id/api/v1/arsip/paket}
       SIPEDAL_API_TIMEOUT: ${SIPEDAL_API_TIMEOUT:-8000}
       DB_SEED: ${DB_SEED:-false}
+      # Pengaman: di NODE_ENV=production, DB_SEED=true DITOLAK kecuali flag ini
+      # juga true (untuk bootstrap awal saja, lalu matikan lagi).
+      DB_SEED_ALLOW_PRODUCTION: ${DB_SEED_ALLOW_PRODUCTION:-false}
     volumes:
       - storage:/data/storage
     networks:

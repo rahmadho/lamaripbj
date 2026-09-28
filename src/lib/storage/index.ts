@@ -3,6 +3,7 @@ import path from "path";
 import { prisma } from "@/lib/db";
 import { LocalStorageProvider } from "./local";
 import { MinioStorageProvider } from "./minio";
+import { assertIsiSesuaiMime, MAGIC_HEAD_BYTES } from "./magic";
 import { SKEMA_DEFAULT, type Skema, type StorageProvider } from "./types";
 
 /**
@@ -83,13 +84,17 @@ export async function saveFile(
 ): Promise<string> {
   opts?.validasi?.(file);
 
+  const buffer = Buffer.from(await file.arrayBuffer());
+  // Jangan percaya `file.type` dari klien: verifikasi magic bytes agar berkas
+  // yang menyamar (mis. .exe ber-Content-Type application/pdf) tertolak.
+  assertIsiSesuaiMime(buffer.subarray(0, MAGIC_HEAD_BYTES), file.type);
+
   const skema = skemaAktif();
   const ext = path.extname(file.name) || "";
   const base = `${randomUUID()}${ext}`;
   const key = opts?.folderLogis ? `${opts.folderLogis}/${base}` : base;
   const storedName = buildStoredName(skema, key);
 
-  const buffer = Buffer.from(await file.arrayBuffer());
   await providerUntuk(skema).put(key, buffer);
 
   const rec = await prisma.fileObj.create({

@@ -104,7 +104,10 @@ export async function GET(
     headers: {
       "Content-Type": file.mimeType,
       "Content-Disposition": `${unduh ? "attachment" : "inline"}; filename="${namaAman}"; filename*=UTF-8''${namaAman}`,
-      "Content-Length": String(file.size),
+      // Jangan pakai `file.size` (dari DB) sebagai Content-Length: bisa beda
+      // dengan objek di storage (korup/berubah) → response menggantung atau
+      // terpotong. Biarkan runtime memakai transfer-encoding chunked.
+      "X-Content-Type-Options": "nosniff",
     },
   });
 }

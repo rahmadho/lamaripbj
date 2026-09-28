@@ -206,12 +206,23 @@ verifikasi SHA-256 per berkas, lalu alihkan pointer DB.
 ## Keamanan
 
 - Password di-hash bcryptjs; sesi via Auth.js
-- Rate limit login 5 percobaan/menit per IP
+- Rate limit login dua bucket: **5 percobaan/menit per akun** + **30/menit per IP**
+  (anti credential-stuffing). In-memory per proses — cocok untuk **satu instance**;
+  pindah ke Redis bila di-scale multi-replica
 - ACL berlapis: owner → user → role → grup; izin subdirektori meng-override induk
-- Validasi file: whitelist MIME + maks 25 MB; nama fisik file di-random (UUID)
-- File disimpan **di luar webroot**; akses hanya via endpoint terproteksi + audit
+- Validasi file berlapis: whitelist MIME + maks 25 MB + **verifikasi magic bytes**
+  (isi berkas harus cocok dengan tipe yang diklaim — menolak berkas yang menyamar)
+- Nama fisik file di-random (UUID); file disimpan **di luar webroot**
+- Akses file hanya via endpoint terproteksi (izin VIEW/DOWNLOAD) + audit
 - Server action selalu memvalidasi ulang data paket ke API (tidak percaya klien)
 - Audit log untuk aksi penting (login, CRUD arsip, share, unduh)
+- Header keamanan ketat (CSP, HSTS, nosniff, frame-ancestors none) di `next.config.ts`
+
+### Catatan operasional deploy
+
+- **`DB_SEED=true` ditolak saat `NODE_ENV=production`** kecuali `DB_SEED_ALLOW_PRODUCTION=true`
+  (hanya untuk bootstrap awal). Matikan lagi setelah selesai.
+- Rate limit & sesi JWT diasumsikan **single-instance**; lihat catatan di atas.
 
 ## Struktur Hak Akses (Ringkas)
 
@@ -228,6 +239,7 @@ verifikasi SHA-256 per berkas, lalu alihkan pointer DB.
 | `P1001: Can't reach database` | PostgreSQL belum jalan / `DATABASE_URL` salah |
 | Login gagal terus | `AUTH_SECRET` berubah → sesi invalid; cek juga rate limit |
 | Upload gagal `Tipe file tidak diizinkan` | hanya PDF/gambar/Office yang diizinkan |
+| Upload gagal `Isi berkas tidak cocok...` | isi file berbeda dari ekstensi/tipe (mis. file di-rename) — unggah berkas asli |
 | Paket tidak ditemukan | cek kode & tipe sumber data (1/2/3); lihat catatan Sipedal di atas |
 | File lama tak terbaca setelah switch MinIO | `STORAGE_DIR` salah / file terhapus; baca docs/STORAGE.md |
 

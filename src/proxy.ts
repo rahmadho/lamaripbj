@@ -1,11 +1,14 @@
 import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
+import { isPublik } from "@/lib/path-publik";
 
 const PUBLIC_PATHS = ["/login", "/panduan", "/hubungi-kami", "/api/auth"];
 
 export default async function proxy(req: Request) {
   const { pathname } = new URL(req.url);
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
+  // Boundary eksplisit: `/login` TIDAK boleh membuka `/login-lain`; `/api/auth`
+  // TIDAK boleh membuka `/api/authz`. Pakai pencocokan segmen, bukan prefix mentah.
+  if (isPublik(pathname, PUBLIC_PATHS)) {
     return NextResponse.next();
   }
   const session = await auth();
